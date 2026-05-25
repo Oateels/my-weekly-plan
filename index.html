@@ -2115,7 +2115,17 @@ textarea:focus{border-color:#b4b2a9}
   }
 
   // 推送到云端
-  function cloudPush(forceReload){
+  // 编码 JSON 为 UTF-8 Base64（跨平台安全）
+  function encodeToBase64(data){
+    var jsonStr = JSON.stringify(data);
+    var utf8Bytes = new TextEncoder().encode(jsonStr);
+    var binary = '';
+    for (var i = 0; i < utf8Bytes.length; i++) binary += String.fromCharCode(utf8Bytes[i]);
+    return btoa(binary);
+  }
+
+  function cloudPush(forceReload, retryCount){
+    retryCount = retryCount || 0;
     var token = getSyncToken();
     if (!token) { updateSyncStatus(); return; }
 
@@ -2124,15 +2134,10 @@ textarea:focus{border-color:#b4b2a9}
     if (btn) btn.disabled = true;
 
     var data = getAllData();
-    // Remove sync metadata from push
     delete data._exportedAt;
     data._updatedAt = new Date().toISOString();
 
-    var jsonStr = JSON.stringify(data);
-    var utf8Bytes = new TextEncoder().encode(jsonStr);
-    var binary = '';
-    for (var i = 0; i < utf8Bytes.length; i++) binary += String.fromCharCode(utf8Bytes[i]);
-    var content = btoa(binary);
+    var content = encodeToBase64(data);
     var sha = localStorage.getItem('wb-sync-sha') || '';
 
     var body = JSON.stringify({ message: '自动同步 ' + data._updatedAt, content: content, sha: sha });
@@ -2142,8 +2147,37 @@ textarea:focus{border-color:#b4b2a9}
       headers: { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
       body: body
     })
-    .then(function(r){ if(!r.ok) return r.json().then(function(x){ throw new Error(x.message || 'HTTP ' + r.status); }); return r.json(); })
+    .then(function(r){
+      if (r.status === 409 && retryCount < 3) {
+        // SHA 冲突，拉取最新 SHA 后重试
+        console.log('Push 409 conflict, retrying with fresh SHA (attempt ' + (retryCount + 1) + ')');
+        return r.json().then(function() {
+          // 先拉取最新 SHA
+          return fetch('https://api.github.com/repos/' + getSyncRepo() + '/contents/' + SYNC_FILE, {
+            headers: { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github.v3+json' }
+          }).then(function(r2){
+            if (r2.status === 404) {
+              // 文件不存在，清空 SHA 重试
+              localStorage.removeItem('wb-sync-sha');
+              return cloudPush(forceReload, retryCount + 1);
+            }
+            return r2.json().then(function(file){
+              localStorage.setItem('wb-sync-sha', file.sha);
+              return cloudPush(forceReload, retryCount + 1);
+            });
+          });
+        });
+      }
+      if (r.status === 404) {
+        // 文件不存在，用空 sha 重试（首次创建）
+        localStorage.removeItem('wb-sync-sha');
+        if (retryCount < 1) return cloudPush(forceReload, retryCount + 1);
+      }
+      if (!r.ok) return r.json().then(function(x){ throw new Error(x.message || 'HTTP ' + r.status); });
+      return r.json();
+    })
     .then(function(result){
+      if (!result || !result.content) return; // 重试中，不处理
       localStorage.setItem('wb-sync-sha', result.content.sha);
       try { localStorage.setItem('wb-sync-last', String(Date.now())); } catch(e) {}
       updateSyncStatus('☁️ 已同步', true);
