@@ -583,6 +583,10 @@ textarea:focus{border-color:#b4b2a9}
       </div>
     </div>
   </div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="sec-label">📋 本周自媒体复盘</div>
+    <textarea id="media-review" placeholder="回顾本周自媒体表现：&#10;&#10;📈 数据亮点：&#10;...&#10;&#10;📉 不足之处：&#10;...&#10;&#10;💡 改进方向：&#10;...&#10;&#10;🎯 下周重点：&#10;..." onchange="saveMediaReview()" rows="6"></textarea>
+  </div>
 </div>
 
 <!-- ===== 生活管理 ===== -->
@@ -915,6 +919,7 @@ textarea:focus{border-color:#b4b2a9}
     loadMtgs();
     loadGoals();
     loadInspo();
+    loadMediaReview();
   })();
 
   window.toggleVideo = function(idx){
@@ -1011,6 +1016,21 @@ textarea:focus{border-color:#b4b2a9}
         list.appendChild(entry);
       }
     } catch(e) {}
+  }
+
+  // ===== 自媒体：本周复盘 =====
+  window.saveMediaReview = function() {
+    var ta = document.getElementById('media-review');
+    var val = ta ? ta.value : '';
+    localStorage.setItem('wb-' + WEEK_KEY + '-media-review', val);
+    autoSyncPush();
+  };
+
+  function loadMediaReview() {
+    var ta = document.getElementById('media-review');
+    if (!ta) return;
+    var saved = localStorage.getItem('wb-' + WEEK_KEY + '-media-review');
+    if (saved !== null && saved !== undefined) ta.value = saved;
   }
 
   // ===== 生活管理：睡眠曲线 =====
