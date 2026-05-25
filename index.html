@@ -241,6 +241,7 @@ textarea:focus{border-color:#b4b2a9}
 .tarot-action{font-size:12px;color:#f0d78c;line-height:1.6;padding:8px 12px;background:rgba(239,159,39,0.12);border-radius:8px;border-left:3px solid #EF9F27}
 .tarot-action-label{font-weight:500;margin-right:4px}
 .tarot-refresh{font-size:10px;color:rgba(200,180,230,0.4);margin-top:6px;cursor:default}
+#tarot-refresh-btn:hover{background:rgba(255,255,255,0.2)!important;color:#fff!important}
 
 /* ===== 日记模块 ===== */
 .diary-toggle{cursor:pointer;font-size:14px;line-height:1;transition:all .2s;user-select:none;margin-left:4px}
@@ -378,6 +379,7 @@ textarea:focus{border-color:#b4b2a9}
         <div class="tarot-label-row">
           <span class="tarot-label-text" id="tarot-label">🔮 今日塔罗</span>
           <span class="tarot-category" id="tarot-cat">—</span>
+          <button id="tarot-refresh-btn" onclick="refreshTarot()" title="重新抽牌" style="margin-left:auto;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#c4b5e0;border-radius:6px;padding:2px 10px;font-size:12px;cursor:pointer;transition:all .2s">🔄 刷新</button>
         </div>
         <div class="tarot-meaning" id="tarot-meaning">✨ 正在为你抽牌...</div>
         <div class="tarot-action">
@@ -2529,15 +2531,50 @@ textarea:focus{border-color:#b4b2a9}
     document.getElementById('tarot-refresh').textContent = '每日自动更新 · 日期种子第' + (TAROT_DECK.indexOf(card) + 1) + '号牌';
   }
 
+  function tarotDateKey(){
+    var now = new Date();
+    return now.getFullYear() + '-' + (now.getMonth()+1) + '-' + now.getDate();
+  }
+
   function initTarot(){
     var card = drawDailyTarot();
     renderTarotCard(card);
 
-    // Save today's card (use date as key to avoid cross-week issues)
-    var now = new Date();
-    var dateKey = now.getFullYear() + '-' + (now.getMonth()+1) + '-' + now.getDate();
+    // 记录当前显示的日期，用于自动检测日期变更
+    var dateKey = tarotDateKey();
+    try { localStorage.setItem('wb-tarot-date', dateKey); } catch(e) {}
+    // 同时保存今日牌面供外部读取
     try { localStorage.setItem('wb-tarot-' + dateKey, JSON.stringify({ idx: TAROT_DECK.indexOf(card), name: card.n })); } catch(e) {}
   }
+
+  // 手动刷新塔罗（用户点击刷新按钮）
+  window.refreshTarot = function(){
+    // 短暂动画反馈
+    var btn = document.getElementById('tarot-refresh-btn');
+    if (btn) { btn.textContent = '✨ 抽牌中...'; btn.style.pointerEvents = 'none'; }
+    var card = drawDailyTarot();
+    setTimeout(function(){
+      renderTarotCard(card);
+      if (btn) { btn.textContent = '🔄 刷新'; btn.style.pointerEvents = 'auto'; }
+      var dateKey = tarotDateKey();
+      try { localStorage.setItem('wb-tarot-date', dateKey); } catch(e) {}
+      try { localStorage.setItem('wb-tarot-' + dateKey, JSON.stringify({ idx: TAROT_DECK.indexOf(card), name: card.n })); } catch(e) {}
+    }, 400);
+  };
+
+  // 自动检测日期变更：页面从后台切回前台时检查日期是否变了
+  var _tarotLastDate = tarotDateKey();
+  document.addEventListener('visibilitychange', function(){
+    if (document.hidden) return; // 只在切回前台时检查
+    var currentDate = tarotDateKey();
+    if (currentDate !== _tarotLastDate) {
+      _tarotLastDate = currentDate;
+      var card = drawDailyTarot();
+      renderTarotCard(card);
+      try { localStorage.setItem('wb-tarot-date', currentDate); } catch(e) {}
+      try { localStorage.setItem('wb-tarot-' + currentDate, JSON.stringify({ idx: TAROT_DECK.indexOf(card), name: card.n })); } catch(e) {}
+    }
+  });
 
   // Load saved news + seed data → show immediately
   (function initNews(){
@@ -2583,10 +2620,10 @@ textarea:focus{border-color:#b4b2a9}
 </script>
 
 <!-- 静态调试标记：如果刷新后能看到这个，说明 HTML 已加载最新版 -->
-<div id="v17-debug" style="position:fixed;bottom:4px;right:4px;font-size:11px;color:#fff;background:#1D9E75;padding:3px 8px;border-radius:4px;z-index:99999;pointer-events:none;font-family:monospace">v17</div>
+<div id="v18-debug" style="position:fixed;bottom:4px;right:4px;font-size:11px;color:#fff;background:#1D9E75;padding:3px 8px;border-radius:4px;z-index:99999;pointer-events:none;font-family:monospace">v18</div>
 
 <script>
-// ===== v17：数据持久化 —— 最简方案，放在页面最后 =====
+// ===== v18：数据持久化 —— 最简方案，放在页面最后 =====
 (function() {
   // —— 周 key 计算 ——
   var d = new Date();
@@ -2625,8 +2662,8 @@ textarea:focus{border-color:#b4b2a9}
   }
 
   // —— 更新调试标记为带时间戳 ——
-  var dbg = document.getElementById('v17-debug');
-  if (dbg) dbg.textContent = 'v17 ' + ts();
+  var dbg = document.getElementById('v18-debug');
+  if (dbg) dbg.textContent = 'v18 ' + ts();
 
   // —— 事件委托：input ——
   document.addEventListener('input', function(e) {
@@ -2641,12 +2678,12 @@ textarea:focus{border-color:#b4b2a9}
     if (e.target && e.target.id && F.indexOf(e.target.id) >= 0) svFans();
   });
 
-  console.log('[v17] exe render-order fix, wk=' + wk);
+  console.log('[v18] tarot refresh + exe fix, wk=' + wk);
 })();
 
 // —— Service Worker（如果存在） ——
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('service-worker.js?v=5')
+  navigator.serviceWorker.register('service-worker.js?v=6')
     .then(function(reg) { console.log('SW registered:', reg.scope); })
     .catch(function(err) { console.log('SW failed:', err); });
 }
