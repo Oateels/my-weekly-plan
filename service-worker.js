@@ -1,4 +1,4 @@
-var CACHE_NAME = 'weekly-planner-v2';
+var CACHE_NAME = 'weekly-planner-v3';
 var ASSETS = [
   '/my-weekly-plan/',
   '/my-weekly-plan/index.html',
@@ -36,7 +36,7 @@ self.addEventListener('fetch', function(event) {
   }
 
   event.respondWith(
-    fetch(event.request).then(function(response) {
+    fetch(event.request, { cache: 'no-cache' }).then(function(response) {
       if (event.request.method === 'GET' && response.status === 200) {
         var cloned = response.clone();
         caches.open(CACHE_NAME).then(function(cache) {
