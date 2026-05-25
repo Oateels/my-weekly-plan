@@ -84,6 +84,8 @@ body{font-family:var(--font-sans);background:#f0f0ed;padding:20px;min-height:100
 .goal-row{display:flex;align-items:flex-start;gap:8px;margin-bottom:8px}
 .goal-input{flex:1;border:none;border-bottom:1.5px solid #d3d1c7;background:transparent;font-size:13px;padding:5px 3px;color:var(--color-text-primary);outline:none}
 .goal-input::placeholder{color:var(--color-text-tertiary)}
+.goal-del{width:22px;height:22px;border:none;background:transparent;color:var(--color-text-tertiary);font-size:16px;cursor:pointer;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;padding:0;margin-top:3px}
+.goal-del:hover{color:#E24B4A;background:rgba(226,75,74,0.08)}
 .review-row{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px}
 .review-lbl{font-size:12px;font-weight:500;color:var(--color-text-secondary);width:64px;flex-shrink:0;padding-top:6px}
 textarea{border:1px solid #e0e0da;border-radius:8px;padding:8px 12px;font-size:13px;font-family:var(--font-sans);width:100%;resize:vertical;background:var(--color-background-secondary);color:var(--color-text-primary);line-height:1.7;outline:none;min-height:56px;transition:border-color .2s}
@@ -472,29 +474,44 @@ textarea:focus{border-color:#b4b2a9}
 <div id="tab-goals" class="section">
   <div class="card" style="margin-bottom:12px">
     <div class="sec-label">广告主业目标 <span class="badge b-ad" style="margin-left:8px">主业</span></div>
-    <div class="goal-row"><div class="dot d-ad" style="margin-top:7px;flex-shrink:0"></div><input class="goal-input" placeholder="本周核心交付物（如：完成 XX 项目创意方案初稿）"></div>
-    <div class="goal-row"><div class="dot d-ad" style="margin-top:7px;flex-shrink:0"></div><input class="goal-input" placeholder="本周关键推进项（如：完成 XX 客户调研）"></div>
+    <div id="goal-ad">
+      <div class="goal-row"><div class="dot d-ad" style="margin-top:7px;flex-shrink:0"></div><input class="goal-input" placeholder="本周核心交付物（如：完成 XX 项目创意方案初稿）" onchange="saveGoals()"><button class="goal-del" onclick="deleteGoal(this)">&times;</button></div>
+      <div class="goal-row"><div class="dot d-ad" style="margin-top:7px;flex-shrink:0"></div><input class="goal-input" placeholder="本周关键推进项（如：完成 XX 客户调研）" onchange="saveGoals()"><button class="goal-del" onclick="deleteGoal(this)">&times;</button></div>
+    </div>
+    <button class="add-btn" style="margin-top:6px;font-size:12px" onclick="addGoal('ad')">+ 添加目标</button>
   </div>
   <div class="card" style="margin-bottom:12px">
     <div class="sec-label">塔罗副业目标 <span class="badge b-tarot" style="margin-left:8px">副业</span></div>
-    <div class="goal-row"><div class="dot d-tarot" style="margin-top:7px;flex-shrink:0"></div><input class="goal-input" placeholder="客户目标（如：完成 X 位客户咨询）"></div>
-    <div class="goal-row"><div class="dot d-tarot" style="margin-top:7px;flex-shrink:0"></div><input class="goal-input" placeholder="产品/沙龙目标（如：推进沙龙合作落地）"></div>
+    <div id="goal-tarot">
+      <div class="goal-row"><div class="dot d-tarot" style="margin-top:7px;flex-shrink:0"></div><input class="goal-input" placeholder="客户目标（如：完成 X 位客户咨询）" onchange="saveGoals()"><button class="goal-del" onclick="deleteGoal(this)">&times;</button></div>
+      <div class="goal-row"><div class="dot d-tarot" style="margin-top:7px;flex-shrink:0"></div><input class="goal-input" placeholder="产品/沙龙目标（如：推进沙龙合作落地）" onchange="saveGoals()"><button class="goal-del" onclick="deleteGoal(this)">&times;</button></div>
+    </div>
+    <button class="add-btn" style="margin-top:6px;font-size:12px" onclick="addGoal('tarot')">+ 添加目标</button>
   </div>
   <div class="card" style="margin-bottom:12px">
     <div class="sec-label">自媒体目标 <span class="badge b-media" style="margin-left:8px">自媒体</span></div>
-    <div class="goal-row"><div class="dot d-media" style="margin-top:7px;flex-shrink:0"></div><input class="goal-input" placeholder="内容目标（如：5 条常规视频 + 1 条深度内容）"></div>
-    <div class="goal-row"><div class="dot d-media" style="margin-top:7px;flex-shrink:0"></div><input class="goal-input" placeholder="抖音粉丝目标（当前距 500 粉差距：___ 粉）"></div>
+    <div id="goal-media">
+      <div class="goal-row"><div class="dot d-media" style="margin-top:7px;flex-shrink:0"></div><input class="goal-input" placeholder="内容目标（如：5 条常规视频 + 1 条深度内容）" onchange="saveGoals()"><button class="goal-del" onclick="deleteGoal(this)">&times;</button></div>
+      <div class="goal-row"><div class="dot d-media" style="margin-top:7px;flex-shrink:0"></div><input class="goal-input" placeholder="抖音粉丝目标（当前距 500 粉差距：___ 粉）" onchange="saveGoals()"><button class="goal-del" onclick="deleteGoal(this)">&times;</button></div>
+    </div>
+    <button class="add-btn" style="margin-top:6px;font-size:12px" onclick="addGoal('media')">+ 添加目标</button>
   </div>
   <div class="card">
     <div class="sec-label">神秘学学习目标 <span class="badge b-occult" style="margin-left:8px">学习</span></div>
-    <div class="goal-row"><div class="dot d-occult" style="margin-top:7px;flex-shrink:0"></div><input class="goal-input" placeholder="本周阅读书目（书名 / 章节 / 页数）"></div>
-    <div class="goal-row"><div class="dot d-occult" style="margin-top:7px;flex-shrink:0"></div><input class="goal-input" placeholder="翻译进度目标（如：完成 XX 章翻译）"></div>
-    <div class="goal-row"><div class="dot d-occult" style="margin-top:7px;flex-shrink:0"></div><input class="goal-input" placeholder="店铺相关（上架资料 / 订单目标）"></div>
+    <div id="goal-occult">
+      <div class="goal-row"><div class="dot d-occult" style="margin-top:7px;flex-shrink:0"></div><input class="goal-input" placeholder="本周阅读书目（书名 / 章节 / 页数）" onchange="saveGoals()"><button class="goal-del" onclick="deleteGoal(this)">&times;</button></div>
+      <div class="goal-row"><div class="dot d-occult" style="margin-top:7px;flex-shrink:0"></div><input class="goal-input" placeholder="翻译进度目标（如：完成 XX 章翻译）" onchange="saveGoals()"><button class="goal-del" onclick="deleteGoal(this)">&times;</button></div>
+      <div class="goal-row"><div class="dot d-occult" style="margin-top:7px;flex-shrink:0"></div><input class="goal-input" placeholder="店铺相关（上架资料 / 订单目标）" onchange="saveGoals()"><button class="goal-del" onclick="deleteGoal(this)">&times;</button></div>
+    </div>
+    <button class="add-btn" style="margin-top:6px;font-size:12px" onclick="addGoal('occult')">+ 添加目标</button>
   </div>
   <div class="card">
     <div class="sec-label">英语学习目标 <span class="badge b-english" style="margin-left:8px">英语</span></div>
-    <div class="goal-row"><div class="dot d-english" style="margin-top:7px;flex-shrink:0"></div><input class="goal-input" placeholder="本周学习目标（如：背 100 个单词 / 读 3 篇英文文章）"></div>
-    <div class="goal-row"><div class="dot d-english" style="margin-top:7px;flex-shrink:0"></div><input class="goal-input" placeholder="学习方式（App / 网课 / 阅读 / 听力）"></div>
+    <div id="goal-english">
+      <div class="goal-row"><div class="dot d-english" style="margin-top:7px;flex-shrink:0"></div><input class="goal-input" placeholder="本周学习目标（如：背 100 个单词 / 读 3 篇英文文章）" onchange="saveGoals()"><button class="goal-del" onclick="deleteGoal(this)">&times;</button></div>
+      <div class="goal-row"><div class="dot d-english" style="margin-top:7px;flex-shrink:0"></div><input class="goal-input" placeholder="学习方式（App / 网课 / 阅读 / 听力）" onchange="saveGoals()"><button class="goal-del" onclick="deleteGoal(this)">&times;</button></div>
+    </div>
+    <button class="add-btn" style="margin-top:6px;font-size:12px" onclick="addGoal('english')">+ 添加目标</button>
   </div>
 </div>
 
@@ -870,6 +887,7 @@ textarea:focus{border-color:#b4b2a9}
     loadSleepData();
     loadExeData();
     loadMtgs();
+    loadGoals();
   })();
 
   window.toggleVideo = function(idx){
@@ -1181,6 +1199,76 @@ textarea:focus{border-color:#b4b2a9}
       });
     }
     localStorage.setItem('wb-' + WEEK_KEY + '-mtgs', JSON.stringify(data));
+  }
+
+  // ===== 本周目标：新增 / 删除 / 持久化 =====
+  var GOAL_CATS = {
+    ad:       { dotClass: 'd-ad',     placeholder: '广告主业目标…' },
+    tarot:    { dotClass: 'd-tarot',  placeholder: '塔罗副业目标…' },
+    media:    { dotClass: 'd-media',  placeholder: '自媒体目标…' },
+    occult:   { dotClass: 'd-occult', placeholder: '神秘学学习目标…' },
+    english:  { dotClass: 'd-english',placeholder: '英语学习目标…' }
+  };
+
+  window.addGoal = function(cat){
+    var container = document.getElementById('goal-' + cat);
+    if (!container) return;
+    var cfg = GOAL_CATS[cat];
+    var row = document.createElement('div');
+    row.className = 'goal-row';
+    row.innerHTML = '<div class="dot ' + cfg.dotClass + '" style="margin-top:7px;flex-shrink:0"></div>' +
+      '<input class="goal-input" placeholder="' + cfg.placeholder + '" onchange="saveGoals()">' +
+      '<button class="goal-del" onclick="deleteGoal(this)">&times;</button>';
+    container.appendChild(row);
+    row.querySelector('.goal-input').focus();
+    saveGoals();
+  };
+
+  window.deleteGoal = function(btn){
+    var row = btn.parentElement;
+    row.remove();
+    saveGoals();
+  };
+
+  window.saveGoals = function(){
+    var data = {};
+    for (var cat in GOAL_CATS) {
+      var container = document.getElementById('goal-' + cat);
+      if (!container) continue;
+      var rows = container.querySelectorAll('.goal-row');
+      var items = [];
+      for (var i = 0; i < rows.length; i++) {
+        var input = rows[i].querySelector('.goal-input');
+        items.push(input ? input.value : '');
+      }
+      data[cat] = items;
+    }
+    localStorage.setItem('wb-' + WEEK_KEY + '-goals', JSON.stringify(data));
+    autoSyncPush();
+  };
+
+  function loadGoals(){
+    try {
+      var raw = localStorage.getItem('wb-' + WEEK_KEY + '-goals');
+      if (!raw) return;
+      var data = JSON.parse(raw);
+      for (var cat in data) {
+        var container = document.getElementById('goal-' + cat);
+        if (!container) continue;
+        var items = data[cat];
+        if (!Array.isArray(items)) continue;
+        container.innerHTML = '';
+        var cfg = GOAL_CATS[cat];
+        for (var i = 0; i < items.length; i++) {
+          var row = document.createElement('div');
+          row.className = 'goal-row';
+          row.innerHTML = '<div class="dot ' + cfg.dotClass + '" style="margin-top:7px;flex-shrink:0"></div>' +
+            '<input class="goal-input" value="' + escapeHtml(items[i] || '') + '" placeholder="' + cfg.placeholder + '" onchange="saveGoals()">' +
+            '<button class="goal-del" onclick="deleteGoal(this)">&times;</button>';
+          container.appendChild(row);
+        }
+      }
+    } catch(e) {}
   }
 
   function loadMtgs(){
