@@ -563,22 +563,22 @@ textarea:focus{border-color:#b4b2a9}
     <div class="fans-grid">
       <div class="fan-card">
         <div class="fan-platform" style="color:#E24B4A">抖音</div>
-        <div class="fan-row"><span class="fan-lbl">上周日粉丝</span><input class="fan-input" placeholder="—" type="number" id="dy-last"></div>
-        <div class="fan-row"><span class="fan-lbl">本周日粉丝</span><input class="fan-input" placeholder="—" type="number" id="dy-cur" oninput="calcGrowth('dy')"></div>
+        <div class="fan-row"><span class="fan-lbl">上周日粉丝</span><input class="fan-input" placeholder="—" type="number" id="dy-last" oninput="saveFans();calcGrowth('dy')"></div>
+        <div class="fan-row"><span class="fan-lbl">本周日粉丝</span><input class="fan-input" placeholder="—" type="number" id="dy-cur" oninput="saveFans();calcGrowth('dy')"></div>
         <div class="fan-row"><span class="fan-lbl">新增</span><span class="fan-val" id="dy-growth" style="color:#1D9E75">—</span></div>
         <div class="fan-row"><span class="fan-lbl">距 1000 粉</span><span class="fan-val" id="dy-gap" style="color:#E24B4A">—</span></div>
       </div>
       <div class="fan-card">
         <div class="fan-platform" style="color:#D85A30">小红书</div>
-        <div class="fan-row"><span class="fan-lbl">上周日粉丝</span><input class="fan-input" placeholder="—" type="number" id="xhs-last"></div>
-        <div class="fan-row"><span class="fan-lbl">本周日粉丝</span><input class="fan-input" placeholder="—" type="number" id="xhs-cur" oninput="calcGrowth('xhs')"></div>
+        <div class="fan-row"><span class="fan-lbl">上周日粉丝</span><input class="fan-input" placeholder="—" type="number" id="xhs-last" oninput="saveFans();calcGrowth('xhs')"></div>
+        <div class="fan-row"><span class="fan-lbl">本周日粉丝</span><input class="fan-input" placeholder="—" type="number" id="xhs-cur" oninput="saveFans();calcGrowth('xhs')"></div>
         <div class="fan-row"><span class="fan-lbl">新增</span><span class="fan-val" id="xhs-growth" style="color:#1D9E75">—</span></div>
-        <div class="fan-row"><span class="fan-lbl">店铺订单</span><input class="fan-input" placeholder="—" type="number" id="xhs-orders"></div>
+        <div class="fan-row"><span class="fan-lbl">店铺订单</span><input class="fan-input" placeholder="—" type="number" id="xhs-orders" oninput="saveFans()"></div>
       </div>
       <div class="fan-card">
         <div class="fan-platform" style="color:#534AB7">微信视频号</div>
-        <div class="fan-row"><span class="fan-lbl">上周日粉丝</span><input class="fan-input" placeholder="—" type="number" id="sph-last"></div>
-        <div class="fan-row"><span class="fan-lbl">本周日粉丝</span><input class="fan-input" placeholder="—" type="number" id="sph-cur" oninput="calcGrowth('sph')"></div>
+        <div class="fan-row"><span class="fan-lbl">上周日粉丝</span><input class="fan-input" placeholder="—" type="number" id="sph-last" oninput="saveFans();calcGrowth('sph')"></div>
+        <div class="fan-row"><span class="fan-lbl">本周日粉丝</span><input class="fan-input" placeholder="—" type="number" id="sph-cur" oninput="saveFans();calcGrowth('sph')"></div>
         <div class="fan-row"><span class="fan-lbl">新增</span><span class="fan-val" id="sph-growth" style="color:#1D9E75">—</span></div>
       </div>
     </div>
@@ -920,6 +920,7 @@ textarea:focus{border-color:#b4b2a9}
     loadGoals();
     loadInspo();
     loadMediaReview();
+    loadFans();
   })();
 
   window.toggleVideo = function(idx){
@@ -929,6 +930,34 @@ textarea:focus{border-color:#b4b2a9}
     lbl.textContent = slot.classList.contains('filled') ? '已发布' : '待发布';
     updateStats();
   };
+
+  // ===== 粉丝数据持久化 =====
+  var FANS_IDS = ['dy-last','dy-cur','xhs-last','xhs-cur','xhs-orders','sph-last','sph-cur'];
+
+  function saveFans(){
+    var data = {};
+    FANS_IDS.forEach(function(id){
+      var el = document.getElementById(id);
+      if (el) data[id] = parseFloat(el.value) || 0;
+    });
+    localStorage.setItem('wb-' + WEEK_KEY + '-fans', JSON.stringify(data));
+  }
+
+  function loadFans(){
+    try {
+      var raw = localStorage.getItem('wb-' + WEEK_KEY + '-fans');
+      if (!raw) return;
+      var data = JSON.parse(raw);
+      FANS_IDS.forEach(function(id){
+        var el = document.getElementById(id);
+        if (el && data[id] !== undefined) el.value = data[id];
+      });
+      // 重新计算各平台增长
+      calcGrowth('dy'); calcGrowth('xhs'); calcGrowth('sph');
+    } catch(e) {}
+  }
+
+  window.saveFans = saveFans;
 
   window.calcGrowth = function(platform){
     var last = parseFloat(document.getElementById(platform + '-last').value) || 0;
