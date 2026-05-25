@@ -2514,10 +2514,8 @@ textarea:focus{border-color:#b4b2a9}
   ];
 
   function drawDailyTarot(){
-    // Use date as seed for consistent daily card
-    var now = new Date();
-    var seed = now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate();
-    var idx = seed % TAROT_DECK.length;
+    // v19: 使用真实随机数，每次抽牌结果不同
+    var idx = Math.floor(Math.random() * TAROT_DECK.length);
     return TAROT_DECK[idx];
   }
 
@@ -2528,7 +2526,7 @@ textarea:focus{border-color:#b4b2a9}
     document.getElementById('tarot-cat').textContent = card.cat;
     document.getElementById('tarot-meaning').textContent = '✨ ' + card.m;
     document.getElementById('tarot-guide').textContent = card.a;
-    document.getElementById('tarot-refresh').textContent = '每日自动更新 · 日期种子第' + (TAROT_DECK.indexOf(card) + 1) + '号牌';
+    document.getElementById('tarot-refresh').textContent = '点击 🔄 刷新可重新抽牌 · 第' + (TAROT_DECK.indexOf(card) + 1) + '号牌';
   }
 
   function tarotDateKey(){
@@ -2620,10 +2618,10 @@ textarea:focus{border-color:#b4b2a9}
 </script>
 
 <!-- 静态调试标记：如果刷新后能看到这个，说明 HTML 已加载最新版 -->
-<div id="v18-debug" style="position:fixed;bottom:4px;right:4px;font-size:11px;color:#fff;background:#1D9E75;padding:3px 8px;border-radius:4px;z-index:99999;pointer-events:none;font-family:monospace">v18</div>
+<div id="v19-debug" style="position:fixed;bottom:4px;right:4px;font-size:11px;color:#fff;background:#1D9E75;padding:3px 8px;border-radius:4px;z-index:99999;pointer-events:none;font-family:monospace">v19</div>
 
 <script>
-// ===== v18：数据持久化 —— 最简方案，放在页面最后 =====
+// ===== v19：数据持久化 —— 最简方案，放在页面最后 =====
 (function() {
   // —— 周 key 计算 ——
   var d = new Date();
@@ -2662,8 +2660,8 @@ textarea:focus{border-color:#b4b2a9}
   }
 
   // —— 更新调试标记为带时间戳 ——
-  var dbg = document.getElementById('v18-debug');
-  if (dbg) dbg.textContent = 'v18 ' + ts();
+  var dbg = document.getElementById('v19-debug');
+  if (dbg) dbg.textContent = 'v19 ' + ts();
 
   // —— 事件委托：input ——
   document.addEventListener('input', function(e) {
@@ -2678,12 +2676,12 @@ textarea:focus{border-color:#b4b2a9}
     if (e.target && e.target.id && F.indexOf(e.target.id) >= 0) svFans();
   });
 
-  console.log('[v18] tarot refresh + exe fix, wk=' + wk);
+  console.log('[v19] tarot random draw, wk=' + wk);
 })();
 
 // —— Service Worker（如果存在） ——
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('service-worker.js?v=6')
+  navigator.serviceWorker.register('service-worker.js?v=7')
     .then(function(reg) { console.log('SW registered:', reg.scope); })
     .catch(function(err) { console.log('SW failed:', err); });
 }
