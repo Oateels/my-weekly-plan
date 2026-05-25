@@ -2562,7 +2562,7 @@ textarea:focus{border-color:#b4b2a9}
 </script>
 
 <!-- 静态调试标记：如果刷新后能看到这个，说明 HTML 已加载最新版 -->
-<div id="v15-debug" style="position:fixed;bottom:4px;right:4px;font-size:11px;color:#fff;background:#1D9E75;padding:3px 8px;border-radius:4px;z-index:99999;pointer-events:none;font-family:monospace">v15 OK</div>
+<div id="v16-debug" style="position:fixed;bottom:4px;right:4px;font-size:11px;color:#fff;background:#1D9E75;padding:3px 8px;border-radius:4px;z-index:99999;pointer-events:none;font-family:monospace">v16</div>
 
 <script>
 // ===== v15：数据持久化 —— 最简方案，放在页面最后 =====
@@ -2604,8 +2604,8 @@ textarea:focus{border-color:#b4b2a9}
   }
 
   // —— 更新调试标记为带时间戳 ——
-  var dbg = document.getElementById('v15-debug');
-  if (dbg) dbg.textContent = 'v15 OK ' + ts();
+  var dbg = document.getElementById('v16-debug');
+  if (dbg) dbg.textContent = 'v16 ' + ts();
 
   // —— 事件委托：input ——
   document.addEventListener('input', function(e) {
@@ -2620,7 +2620,7 @@ textarea:focus{border-color:#b4b2a9}
     if (e.target && e.target.id && F.indexOf(e.target.id) >= 0) svFans();
   });
 
-  console.log('[v15] 数据持久化已就绪, wk=' + wk);
+  console.log('[v16] exe fix, wk=' + wk);
 })();
 
 // —— Service Worker（如果存在） ——
