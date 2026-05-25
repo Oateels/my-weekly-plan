@@ -1744,17 +1744,19 @@ textarea:focus{border-color:#b4b2a9}
 
       // Smart merge: cloud data fills gaps
       var keys = Object.keys(content).filter(function(k){ return k.indexOf('wb-') === 0; });
+      var mergedCount = 0;
       for (var i = 0; i < keys.length; i++) {
         var key = keys[i];
         if (!localStorage.getItem(key)) {
           var val = content[key];
           localStorage.setItem(key, typeof val === 'string' ? val : JSON.stringify(val));
+          mergedCount++;
         }
       }
 
       try { localStorage.setItem('wb-sync-last', String(Date.now())); } catch(e) {}
       updateSyncStatus('☁️ 已同步', true);
-      if (callback) callback(true);
+      if (callback) callback(true, mergedCount);
     })
     .catch(function(e){
       updateSyncStatus('☁️ 同步失败', false);
@@ -1894,9 +1896,9 @@ textarea:focus{border-color:#b4b2a9}
   // Auto-check sync status and pull on load
   updateSyncStatus();
   if (getSyncToken()) {
-    cloudPull(function(ok){
-      if (ok) {
-        // Reload page to apply merged data from cloud
+    cloudPull(function(ok, mergedCount){
+      if (ok && mergedCount > 0) {
+        // Only reload if cloud brought in new data that was missing locally
         setTimeout(function(){ location.reload(); }, 500);
       }
     });
