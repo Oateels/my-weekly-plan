@@ -2079,8 +2079,21 @@ textarea:focus{border-color:#b4b2a9}
     fetch('https://api.github.com/repos/' + getSyncRepo() + '/contents/' + SYNC_FILE, {
       headers: { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github.v3+json' }
     })
-    .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(r){
+      if (r.status === 404) {
+        // 首次使用：云端无数据，触发自动推送创建文件
+        localStorage.removeItem('wb-sync-sha');
+        updateSyncStatus('☁️ 已同步', true);
+        try { localStorage.setItem('wb-sync-last', String(Date.now())); } catch(e) {}
+        autoSyncPush();
+        if (callback) callback(true, 0);
+        return;
+      }
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
     .then(function(file){
+      if (!file) return; // 404 已在上层处理
       var binary = atob(file.content);
       var bytes = new Uint8Array(binary.length);
       for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
