@@ -1234,9 +1234,22 @@ textarea:focus{border-color:#b4b2a9}
   function getExeData(){
     try {
       var raw = localStorage.getItem('wb-' + WEEK_KEY + '-exe');
-      if (!raw) return {goal: 3, sessions: []};
+      console.log('[LOAD] getExeData: key=wb-' + WEEK_KEY + '-exe, raw=', raw ? raw.substring(0,80) : 'null');
+      if (!raw) {
+        // 兜底：当前周没数据，尝试找最近有数据的周（最多往前找4周）
+        for (var w = 1; w <= 4; w++) {
+          var d = new Date(); d.setDate(d.getDate() - w * 7);
+          var key = 'wb-' + d.getFullYear() + '-W' + (function(){
+            var j1 = new Date(d.getFullYear(),0,1);
+            return Math.ceil((Math.floor((d-j1)/86400000)+j1.getDay()+1)/7);
+          })() + '-exe';
+          var r = localStorage.getItem(key);
+          if (r) { console.log('[LOAD] Found data in nearby week:', key); raw = r; break; }
+        }
+        if (!raw) return {goal: 3, sessions: []};
+      }
       return JSON.parse(raw);
-    } catch(e) { return {goal: 3, sessions: []}; }
+    } catch(e) { console.error('[LOAD] getExeData ERROR:', e); return {goal: 3, sessions: []}; }
   }
 
   function saveExeData(){
