@@ -86,6 +86,18 @@ body{font-family:var(--font-sans);background:#f0f0ed;padding:20px;min-height:100
 .goal-input::placeholder{color:var(--color-text-tertiary)}
 .goal-del{width:22px;height:22px;border:none;background:transparent;color:var(--color-text-tertiary);font-size:16px;cursor:pointer;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;padding:0;margin-top:3px}
 .goal-del:hover{color:#E24B4A;background:rgba(226,75,74,0.08)}
+.inspo-entry{background:var(--color-background-secondary);border-radius:8px;padding:10px 12px;margin-bottom:8px;border:0.5px solid var(--color-border-tertiary)}
+.inspo-header{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.inspo-idx{font-size:11px;color:var(--color-text-secondary);width:24px;flex-shrink:0}
+.inspo-title{flex:1;border:none;border-bottom:1.5px solid #d3d1c7;background:transparent;font-size:13px;padding:3px 3px;color:var(--color-text-primary);outline:none;font-weight:500}
+.inspo-title:focus{border-color:#1D9E75}
+.inspo-title::placeholder{color:var(--color-text-tertiary)}
+.inspo-body-wrap{display:flex;align-items:flex-start;gap:6px}
+.inspo-body{flex:1;border:1px solid #e0e0da;border-radius:6px;padding:6px 10px;font-size:12px;font-family:var(--font-sans);resize:vertical;background:#fff;color:var(--color-text-primary);line-height:1.6;outline:none;min-height:44px}
+.inspo-body:focus{border-color:#1D9E75}
+.inspo-body::placeholder{color:var(--color-text-tertiary)}
+.inspo-del{width:22px;height:22px;border:none;background:transparent;color:var(--color-text-tertiary);font-size:16px;cursor:pointer;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;padding:0;margin-top:4px}
+.inspo-del:hover{color:#E24B4A;background:rgba(226,75,74,0.08)}
 .review-row{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px}
 .review-lbl{font-size:12px;font-weight:500;color:var(--color-text-secondary);width:64px;flex-shrink:0;padding-top:6px}
 textarea{border:1px solid #e0e0da;border-radius:8px;padding:8px 12px;font-size:13px;font-family:var(--font-sans);width:100%;resize:vertical;background:var(--color-background-secondary);color:var(--color-text-primary);line-height:1.7;outline:none;min-height:56px;transition:border-color .2s}
@@ -492,7 +504,7 @@ textarea:focus{border-color:#b4b2a9}
     <div class="sec-label">自媒体目标 <span class="badge b-media" style="margin-left:8px">自媒体</span></div>
     <div id="goal-media">
       <div class="goal-row"><div class="dot d-media" style="margin-top:7px;flex-shrink:0"></div><input class="goal-input" placeholder="内容目标（如：5 条常规视频 + 1 条深度内容）" onchange="saveGoals()"><button class="goal-del" onclick="deleteGoal(this)">&times;</button></div>
-      <div class="goal-row"><div class="dot d-media" style="margin-top:7px;flex-shrink:0"></div><input class="goal-input" placeholder="抖音粉丝目标（当前距 500 粉差距：___ 粉）" onchange="saveGoals()"><button class="goal-del" onclick="deleteGoal(this)">&times;</button></div>
+      <div class="goal-row"><div class="dot d-media" style="margin-top:7px;flex-shrink:0"></div><input class="goal-input" placeholder="抖音粉丝目标（当前距 1000 粉差距：___ 粉）" onchange="saveGoals()"><button class="goal-del" onclick="deleteGoal(this)">&times;</button></div>
     </div>
     <button class="add-btn" style="margin-top:6px;font-size:12px" onclick="addGoal('media')">+ 添加目标</button>
   </div>
@@ -529,30 +541,44 @@ textarea:focus{border-color:#b4b2a9}
     <div style="font-size:12px;color:var(--color-text-secondary)">💡 点击格子标记为「已发布」，再次点击取消</div>
   </div>
   <div class="card" style="margin-bottom:14px">
-    <div class="sec-label">📝 深度内容策划</div>
-    <textarea placeholder="本周深度内容选题：&#10;1. ...&#10;2. ...&#10;&#10;拍摄 / 制作计划："></textarea>
+    <div class="sec-label">💡 内容灵感速记</div>
+    <div id="inspo-list">
+      <div class="inspo-entry">
+        <div class="inspo-header"><span class="inspo-idx">①</span><input class="inspo-title" placeholder="视频标题" value="" onchange="saveInspo()"><button class="inspo-del" onclick="deleteInspo(this)">&times;</button></div>
+        <div class="inspo-body-wrap"><textarea class="inspo-body" placeholder="大致内容、拍摄思路…" onchange="saveInspo()" rows="2"></textarea></div>
+      </div>
+      <div class="inspo-entry">
+        <div class="inspo-header"><span class="inspo-idx">②</span><input class="inspo-title" placeholder="视频标题" value="" onchange="saveInspo()"><button class="inspo-del" onclick="deleteInspo(this)">&times;</button></div>
+        <div class="inspo-body-wrap"><textarea class="inspo-body" placeholder="大致内容、拍摄思路…" onchange="saveInspo()" rows="2"></textarea></div>
+      </div>
+      <div class="inspo-entry">
+        <div class="inspo-header"><span class="inspo-idx">③</span><input class="inspo-title" placeholder="视频标题" value="" onchange="saveInspo()"><button class="inspo-del" onclick="deleteInspo(this)">&times;</button></div>
+        <div class="inspo-body-wrap"><textarea class="inspo-body" placeholder="大致内容、拍摄思路…" onchange="saveInspo()" rows="2"></textarea></div>
+      </div>
+    </div>
+    <button class="add-btn" style="margin-top:8px;font-size:12px" onclick="addInspo()">+ 添加灵感</button>
   </div>
   <div class="card">
     <div class="sec-label">📊 各平台粉丝数据</div>
     <div class="fans-grid">
       <div class="fan-card">
         <div class="fan-platform" style="color:#E24B4A">抖音</div>
-        <div class="fan-row"><span class="fan-lbl">上周粉丝</span><input class="fan-input" placeholder="—" type="number" id="dy-last"></div>
-        <div class="fan-row"><span class="fan-lbl">本周粉丝</span><input class="fan-input" placeholder="—" type="number" id="dy-cur" oninput="calcGrowth('dy')"></div>
+        <div class="fan-row"><span class="fan-lbl">上周日粉丝</span><input class="fan-input" placeholder="—" type="number" id="dy-last"></div>
+        <div class="fan-row"><span class="fan-lbl">本周日粉丝</span><input class="fan-input" placeholder="—" type="number" id="dy-cur" oninput="calcGrowth('dy')"></div>
         <div class="fan-row"><span class="fan-lbl">新增</span><span class="fan-val" id="dy-growth" style="color:#1D9E75">—</span></div>
-        <div class="fan-row"><span class="fan-lbl">距 500 粉</span><span class="fan-val" id="dy-gap" style="color:#E24B4A">—</span></div>
+        <div class="fan-row"><span class="fan-lbl">距 1000 粉</span><span class="fan-val" id="dy-gap" style="color:#E24B4A">—</span></div>
       </div>
       <div class="fan-card">
         <div class="fan-platform" style="color:#D85A30">小红书</div>
-        <div class="fan-row"><span class="fan-lbl">上周粉丝</span><input class="fan-input" placeholder="—" type="number" id="xhs-last"></div>
-        <div class="fan-row"><span class="fan-lbl">本周粉丝</span><input class="fan-input" placeholder="—" type="number" id="xhs-cur" oninput="calcGrowth('xhs')"></div>
+        <div class="fan-row"><span class="fan-lbl">上周日粉丝</span><input class="fan-input" placeholder="—" type="number" id="xhs-last"></div>
+        <div class="fan-row"><span class="fan-lbl">本周日粉丝</span><input class="fan-input" placeholder="—" type="number" id="xhs-cur" oninput="calcGrowth('xhs')"></div>
         <div class="fan-row"><span class="fan-lbl">新增</span><span class="fan-val" id="xhs-growth" style="color:#1D9E75">—</span></div>
         <div class="fan-row"><span class="fan-lbl">店铺订单</span><input class="fan-input" placeholder="—" type="number" id="xhs-orders"></div>
       </div>
       <div class="fan-card">
         <div class="fan-platform" style="color:#534AB7">微信视频号</div>
-        <div class="fan-row"><span class="fan-lbl">上周粉丝</span><input class="fan-input" placeholder="—" type="number" id="sph-last"></div>
-        <div class="fan-row"><span class="fan-lbl">本周粉丝</span><input class="fan-input" placeholder="—" type="number" id="sph-cur" oninput="calcGrowth('sph')"></div>
+        <div class="fan-row"><span class="fan-lbl">上周日粉丝</span><input class="fan-input" placeholder="—" type="number" id="sph-last"></div>
+        <div class="fan-row"><span class="fan-lbl">本周日粉丝</span><input class="fan-input" placeholder="—" type="number" id="sph-cur" oninput="calcGrowth('sph')"></div>
         <div class="fan-row"><span class="fan-lbl">新增</span><span class="fan-val" id="sph-growth" style="color:#1D9E75">—</span></div>
       </div>
     </div>
@@ -642,7 +668,7 @@ textarea:focus{border-color:#b4b2a9}
     <div class="sec-label">自媒体复盘 <span class="badge b-media" style="margin-left:8px">三平台</span></div>
     <div class="review-row"><span class="review-lbl">数据亮点</span><textarea placeholder="哪条视频数据最好？原因分析？"></textarea></div>
     <div class="review-row"><span class="review-lbl">内容反思</span><textarea placeholder="哪类内容更受欢迎？下周调整方向？"></textarea></div>
-    <div class="review-row"><span class="review-lbl">抖音进度</span><textarea placeholder="本周涨粉多少？距 500 粉目标还差多少？如何加速？"></textarea></div>
+    <div class="review-row"><span class="review-lbl">抖音进度</span><textarea placeholder="本周涨粉多少？距 1000 粉目标还差多少？如何加速？"></textarea></div>
   </div>
   <div class="card" style="margin-bottom:12px">
     <div class="sec-label">神秘学学习复盘 <span class="badge b-occult" style="margin-left:8px">学习</span></div>
@@ -888,6 +914,7 @@ textarea:focus{border-color:#b4b2a9}
     loadExeData();
     loadMtgs();
     loadGoals();
+    loadInspo();
   })();
 
   window.toggleVideo = function(idx){
@@ -910,12 +937,81 @@ textarea:focus{border-color:#b4b2a9}
     if (platform === 'dy') {
       var gap = document.getElementById('dy-gap');
       if (gap) {
-        var remain = 500 - cur;
+        var remain = 1000 - cur;
         gap.textContent = remain > 0 ? remain + ' 粉' : '🎉 已达标！';
         gap.style.color = remain > 0 ? '#E24B4A' : '#1D9E75';
       }
     }
   };
+
+  // ===== 自媒体：内容灵感速记 =====
+  window.addInspo = function() {
+    var list = document.getElementById('inspo-list');
+    var entries = list.querySelectorAll('.inspo-entry');
+    var n = entries.length + 1;
+    var nums = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫','⑬','⑭','⑮'];
+    var num = nums[n - 1] || n;
+    var entry = document.createElement('div');
+    entry.className = 'inspo-entry';
+    entry.innerHTML = '<div class="inspo-header"><span class="inspo-idx">' + num + '</span>' +
+      '<input class="inspo-title" placeholder="视频标题" value="" onchange="saveInspo()">' +
+      '<button class="inspo-del" onclick="deleteInspo(this)">&times;</button></div>' +
+      '<div class="inspo-body-wrap"><textarea class="inspo-body" placeholder="大致内容、拍摄思路…" onchange="saveInspo()" rows="2"></textarea></div>';
+    list.appendChild(entry);
+    entry.querySelector('.inspo-title').focus();
+    saveInspo();
+  };
+
+  window.deleteInspo = function(btn) {
+    var entry = btn.closest('.inspo-entry');
+    if (!entry) return;
+    entry.remove();
+    // Re-number
+    var entries = document.querySelectorAll('#inspo-list .inspo-entry');
+    var nums = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫','⑬','⑭','⑮'];
+    for (var i = 0; i < entries.length; i++) {
+      var idx = entries[i].querySelector('.inspo-idx');
+      if (idx) idx.textContent = nums[i] || (i + 1);
+    }
+    saveInspo();
+  };
+
+  window.saveInspo = function() {
+    var entries = document.querySelectorAll('#inspo-list .inspo-entry');
+    var data = [];
+    for (var i = 0; i < entries.length; i++) {
+      var title = entries[i].querySelector('.inspo-title');
+      var body = entries[i].querySelector('.inspo-body');
+      data.push({
+        title: title ? title.value : '',
+        body: body ? body.value : ''
+      });
+    }
+    localStorage.setItem('wb-' + WEEK_KEY + '-inspo', JSON.stringify(data));
+    autoSyncPush();
+  };
+
+  function loadInspo() {
+    try {
+      var raw = localStorage.getItem('wb-' + WEEK_KEY + '-inspo');
+      if (!raw) return;
+      var data = JSON.parse(raw);
+      if (!Array.isArray(data) || data.length === 0) return;
+      var list = document.getElementById('inspo-list');
+      list.innerHTML = '';
+      var nums = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫','⑬','⑭','⑮'];
+      for (var i = 0; i < data.length; i++) {
+        var num = nums[i] || (i + 1);
+        var entry = document.createElement('div');
+        entry.className = 'inspo-entry';
+        entry.innerHTML = '<div class="inspo-header"><span class="inspo-idx">' + num + '</span>' +
+          '<input class="inspo-title" placeholder="视频标题" value="' + escapeHtml(data[i].title || '') + '" onchange="saveInspo()">' +
+          '<button class="inspo-del" onclick="deleteInspo(this)">&times;</button></div>' +
+          '<div class="inspo-body-wrap"><textarea class="inspo-body" placeholder="大致内容、拍摄思路…" onchange="saveInspo()" rows="2">' + escapeHtml(data[i].body || '') + '</textarea></div>';
+        list.appendChild(entry);
+      }
+    } catch(e) {}
+  }
 
   // ===== 生活管理：睡眠曲线 =====
   function getSleepData(){
