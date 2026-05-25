@@ -563,22 +563,22 @@ textarea:focus{border-color:#b4b2a9}
     <div class="fans-grid">
       <div class="fan-card">
         <div class="fan-platform" style="color:#E24B4A">抖音</div>
-        <div class="fan-row"><span class="fan-lbl">上周日粉丝</span><input class="fan-input" placeholder="—" type="number" id="dy-last" oninput="saveFans();calcGrowth('dy')"></div>
-        <div class="fan-row"><span class="fan-lbl">本周日粉丝</span><input class="fan-input" placeholder="—" type="number" id="dy-cur" oninput="saveFans();calcGrowth('dy')"></div>
+        <div class="fan-row"><span class="fan-lbl">上周日粉丝</span><input class="fan-input" placeholder="—" type="number" id="dy-last" oninput="saveFans();calcGrowth('dy')" onchange="saveFans()"></div>
+        <div class="fan-row"><span class="fan-lbl">本周日粉丝</span><input class="fan-input" placeholder="—" type="number" id="dy-cur" oninput="saveFans();calcGrowth('dy')" onchange="saveFans()"></div>
         <div class="fan-row"><span class="fan-lbl">新增</span><span class="fan-val" id="dy-growth" style="color:#1D9E75">—</span></div>
         <div class="fan-row"><span class="fan-lbl">距 1000 粉</span><span class="fan-val" id="dy-gap" style="color:#E24B4A">—</span></div>
       </div>
       <div class="fan-card">
         <div class="fan-platform" style="color:#D85A30">小红书</div>
-        <div class="fan-row"><span class="fan-lbl">上周日粉丝</span><input class="fan-input" placeholder="—" type="number" id="xhs-last" oninput="saveFans();calcGrowth('xhs')"></div>
-        <div class="fan-row"><span class="fan-lbl">本周日粉丝</span><input class="fan-input" placeholder="—" type="number" id="xhs-cur" oninput="saveFans();calcGrowth('xhs')"></div>
+        <div class="fan-row"><span class="fan-lbl">上周日粉丝</span><input class="fan-input" placeholder="—" type="number" id="xhs-last" oninput="saveFans();calcGrowth('xhs')" onchange="saveFans()"></div>
+        <div class="fan-row"><span class="fan-lbl">本周日粉丝</span><input class="fan-input" placeholder="—" type="number" id="xhs-cur" oninput="saveFans();calcGrowth('xhs')" onchange="saveFans()"></div>
         <div class="fan-row"><span class="fan-lbl">新增</span><span class="fan-val" id="xhs-growth" style="color:#1D9E75">—</span></div>
-        <div class="fan-row"><span class="fan-lbl">店铺订单</span><input class="fan-input" placeholder="—" type="number" id="xhs-orders" oninput="saveFans()"></div>
+        <div class="fan-row"><span class="fan-lbl">店铺订单</span><input class="fan-input" placeholder="—" type="number" id="xhs-orders" oninput="saveFans()" onchange="saveFans()"></div>
       </div>
       <div class="fan-card">
         <div class="fan-platform" style="color:#534AB7">微信视频号</div>
-        <div class="fan-row"><span class="fan-lbl">上周日粉丝</span><input class="fan-input" placeholder="—" type="number" id="sph-last" oninput="saveFans();calcGrowth('sph')"></div>
-        <div class="fan-row"><span class="fan-lbl">本周日粉丝</span><input class="fan-input" placeholder="—" type="number" id="sph-cur" oninput="saveFans();calcGrowth('sph')"></div>
+        <div class="fan-row"><span class="fan-lbl">上周日粉丝</span><input class="fan-input" placeholder="—" type="number" id="sph-last" oninput="saveFans();calcGrowth('sph')" onchange="saveFans()"></div>
+        <div class="fan-row"><span class="fan-lbl">本周日粉丝</span><input class="fan-input" placeholder="—" type="number" id="sph-cur" oninput="saveFans();calcGrowth('sph')" onchange="saveFans()"></div>
         <div class="fan-row"><span class="fan-lbl">新增</span><span class="fan-val" id="sph-growth" style="color:#1D9E75">—</span></div>
       </div>
     </div>
@@ -938,7 +938,9 @@ textarea:focus{border-color:#b4b2a9}
     var data = {};
     FANS_IDS.forEach(function(id){
       var el = document.getElementById(id);
-      if (el) data[id] = parseFloat(el.value) || 0;
+      if (!el) return;
+      var v = el.value.trim();
+      data[id] = v === '' ? -1 : parseFloat(v);
     });
     localStorage.setItem('wb-' + WEEK_KEY + '-fans', JSON.stringify(data));
   }
@@ -950,9 +952,9 @@ textarea:focus{border-color:#b4b2a9}
       var data = JSON.parse(raw);
       FANS_IDS.forEach(function(id){
         var el = document.getElementById(id);
-        if (el && data[id] !== undefined) el.value = data[id];
+        if (!el || data[id] === undefined) return;
+        el.value = data[id] === -1 ? '' : data[id];
       });
-      // 重新计算各平台增长
       calcGrowth('dy'); calcGrowth('xhs'); calcGrowth('sph');
     } catch(e) {}
   }
