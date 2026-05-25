@@ -1231,23 +1231,40 @@ textarea:focus{border-color:#b4b2a9}
   }
 
   // ===== 生活管理：健身追踪 =====
+  function getExeWeekKey(){
+    // 返回本周一日期 YYYY-MM-DD 作为周唯一标识（避免周日/周一0点边界问题）
+    var now = new Date();
+    var day = now.getDay(); // 0=周日, 1=周一, ..., 6=周六
+    var monday = new Date(now);
+    monday.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+    var y = monday.getFullYear(), m = monday.getMonth()+1, d = monday.getDate();
+    return y + '-' + (m<10?'0':'') + m + '-' + (d<10?'0':'') + d;
+  }
+
   function getExeData(){
     try {
-      var raw = localStorage.getItem('wb-' + WEEK_KEY + '-exe');
-      console.log('[LOAD] getExeData: key=wb-' + WEEK_KEY + '-exe, raw=', raw ? raw.substring(0,80) : 'null');
+      var wk = getExeWeekKey();
+      var raw = localStorage.getItem('wb-' + wk + '-exe');
+      console.log('[LOAD] getExeData: wk=' + wk + ', key=wb-' + wk + '-exe, raw=', raw ? raw.substring(0,80) : 'null');
+      if (!raw) {
+        // 兼容旧格式：尝试 YYYY-WNN 格式
+        var oldWk = getWeekKey();
+        raw = localStorage.getItem('wb-' + oldWk + '-exe');
+        if (raw) console.log('[LOAD] Found old-format data, wk=' + oldWk);
+      }
       if (!raw) {
         // 兜底：当前周没数据，尝试找最近有数据的周（最多往前找4周）
         for (var w = 1; w <= 4; w++) {
-          var d = new Date(); d.setDate(d.getDate() - w * 7);
-          var key = 'wb-' + d.getFullYear() + '-W' + (function(){
-            var j1 = new Date(d.getFullYear(),0,1);
-            return Math.ceil((Math.floor((d-j1)/86400000)+j1.getDay()+1)/7);
+          var d2 = new Date(); d2.setDate(d2.getDate() - w * 7);
+          var key = 'wb-' + d2.getFullYear() + '-' + (function(){
+            var jan1 = new Date(d2.getFullYear(),0,1);
+            return Math.ceil((Math.floor((d2-jan1)/86400000)+jan1.getDay()+1)/7);
           })() + '-exe';
           var r = localStorage.getItem(key);
           if (r) { console.log('[LOAD] Found data in nearby week:', key); raw = r; break; }
         }
-        if (!raw) return {goal: 3, sessions: []};
       }
+      if (!raw) return {goal: 3, sessions: []};
       return JSON.parse(raw);
     } catch(e) { console.error('[LOAD] getExeData ERROR:', e); return {goal: 3, sessions: []}; }
   }
@@ -1269,8 +1286,9 @@ textarea:focus{border-color:#b4b2a9}
       });
     }
     var goal = document.getElementById('exe-goal').value || '3';
-    localStorage.setItem('wb-' + WEEK_KEY + '-exe', JSON.stringify({goal: goal, sessions: sessions}));
-    console.log('[SAVE] exe saved, key=wb-' + WEEK_KEY + '-exe', {goal: goal, sessions: sessions});
+    var wk = getExeWeekKey();
+    localStorage.setItem('wb-' + wk + '-exe', JSON.stringify({goal: goal, sessions: sessions}));
+    console.log('[SAVE] exe saved, wk=' + wk + ', key=wb-' + wk + '-exe', {goal: goal, sessions: sessions});
     updateExeStats();
     autoSyncPush();
   }
@@ -1359,7 +1377,7 @@ textarea:focus{border-color:#b4b2a9}
   };
 
   function loadExeData(){
-    console.log('[LOAD] loadExeData called, WEEK_KEY=', WEEK_KEY);
+    console.log('[LOAD] loadExeData called, WEEK_KEY=', WEEK_KEY, 'exeWk=', getExeWeekKey());
     var container = document.getElementById('exe-sessions');
     if (!container) {
       console.warn('[LOAD] exe-sessions not found, retrying in 100ms');
@@ -1370,7 +1388,7 @@ textarea:focus{border-color:#b4b2a9}
     console.log('[LOAD] getExeData returned:', d);
     renderExeSessions(d);
     var dbg = document.getElementById('exe-load-debug');
-    if (dbg) dbg.textContent = 'load:' + (d.sessions ? d.sessions.length : 0) + ' sessions, key=' + WEEK_KEY;
+    if (dbg) dbg.textContent = 'load:' + (d.sessions ? d.sessions.length : 0) + ' sessions, wk=' + getExeWeekKey();
   }
 
 
