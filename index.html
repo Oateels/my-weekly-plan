@@ -122,6 +122,20 @@ textarea:focus{border-color:#b4b2a9}
 .exe-dots{display:flex;gap:4px;flex-wrap:wrap}
 .exe-dot{width:18px;height:18px;border-radius:50%;border:1.5px solid #d3d1c7;cursor:pointer;background:transparent;transition:all .15s}
 .exe-dot.done{background:#D84B6B;border-color:#D84B6B}
+.exe-session{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary)}
+.exe-session:last-child{border-bottom:none}
+.exe-session .exe-seq{font-size:11px;color:var(--color-text-secondary);width:36px;flex-shrink:0}
+.exe-session .exe-dot{width:20px;height:20px;border-radius:50%;border:2px solid #d3d1c7;cursor:pointer;background:transparent;transition:all .15s;flex-shrink:0}
+.exe-session .exe-dot.done{background:#D84B6B;border-color:#D84B6B}
+.exe-dur-input{width:48px;border:1px solid #e0e0da;border-radius:5px;padding:4px;font-size:12px;text-align:center;outline:none;flex-shrink:0}
+.exe-dur-input:focus{border-color:#D84B6B}
+.exe-note-input{flex:1;border:1px solid #e0e0da;border-radius:5px;padding:4px 8px;font-size:12px;outline:none;min-width:60px}
+.exe-note-input:focus{border-color:#D84B6B}
+.exe-note-input::placeholder{color:var(--color-text-tertiary)}
+.exe-del{width:22px;height:22px;border:none;background:transparent;color:var(--color-text-tertiary);font-size:16px;cursor:pointer;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;padding:0}
+.exe-del:hover{color:#E24B4A;background:rgba(226,75,74,0.08)}
+.mtg-del{width:22px;height:22px;border:none;background:transparent;color:var(--color-text-tertiary);font-size:16px;cursor:pointer;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;padding:0}
+.mtg-del:hover{color:#E24B4A;background:rgba(226,75,74,0.08)}
 .exe-summary{font-size:12px;color:var(--color-text-secondary);margin-left:auto;text-align:right}
 .exe-num{font-size:16px;font-weight:500;color:#D84B6B}
 .life-stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
@@ -572,21 +586,14 @@ textarea:focus{border-color:#b4b2a9}
 
   <div class="card">
     <div class="sec-label">💪 本周健身记录</div>
-    <div style="margin-bottom:10px">
-      <span style="font-size:12px;color:var(--color-text-secondary);margin-right:8px">本周目标：</span>
-      <input type="number" class="sleep-input" id="exe-goal" value="2" min="0" max="14" style="width:50px;display:inline-block" onchange="updateExeDots()">
-      <span style="font-size:12px;color:var(--color-text-secondary)"> 次，每次 </span>
-      <input type="number" class="sleep-input" id="exe-duration" value="30" min="5" max="180" style="width:50px;display:inline-block" onchange="updateExeDots()">
-      <span style="font-size:12px;color:var(--color-text-secondary)"> 分钟</span>
+    <div style="margin-bottom:10px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:12px;color:var(--color-text-secondary)">本周目标：</span>
+      <input type="number" class="sleep-input" id="exe-goal" value="3" min="0" max="14" style="width:50px" onchange="updateExeSessions()">
+      <span style="font-size:12px;color:var(--color-text-secondary)">次</span>
+      <div class="exe-summary" style="margin-left:auto">已完成 <b id="exe-done">0</b>/<span id="exe-goal-display">3</span> 次 | 总计 <b id="exe-total-min">0</b> 分钟</div>
     </div>
-    <div id="exe-tracker">
-      <div class="exe-row">
-        <span class="exe-goal">完成情况</span>
-        <div class="exe-dots" id="exe-dots"></div>
-        <div class="exe-summary">已完成 <span class="exe-num" id="exe-done">0</span> 次 / <span id="exe-total-min">0</span> 分钟</div>
-      </div>
-    </div>
-    <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:6px">💡 修改目标和时长后会自动生成对应数量的圆点，点击标记完成</div>
+    <div id="exe-sessions"></div>
+    <button class="add-btn" style="margin-top:10px;font-size:12px" onclick="addExeSession()">+ 添加训练记录</button>
   </div>
 </div>
 
@@ -595,9 +602,9 @@ textarea:focus{border-color:#b4b2a9}
   <div class="card">
     <div class="sec-label">本周会议 &amp; 重要时间节点</div>
     <div id="mtg-list">
-      <div class="mtg-row"><span class="mtg-time" contenteditable="true">周一 10:00</span><span class="mtg-name" contenteditable="true">项目启动会</span><span class="mtg-tag" style="background:#E6F1FB;color:#185FA5">主业</span></div>
-      <div class="mtg-row"><span class="mtg-time" contenteditable="true">周三 15:00</span><span class="mtg-name" contenteditable="true">塔罗沙龙洽谈</span><span class="mtg-tag" style="background:#EEEDFE;color:#534AB7">副业</span></div>
-      <div class="mtg-row"><span class="mtg-time" contenteditable="true">周五 11:00</span><span class="mtg-name" contenteditable="true">创意方案提案</span><span class="mtg-tag" style="background:#E6F1FB;color:#185FA5">主业</span></div>
+      <div class="mtg-row"><span class="mtg-time" contenteditable="true">周一 10:00</span><span class="mtg-name" contenteditable="true">项目启动会</span><span class="mtg-tag" style="background:#E6F1FB;color:#185FA5">主业</span><button class="mtg-del" onclick="deleteMtg(this)">&times;</button></div>
+      <div class="mtg-row"><span class="mtg-time" contenteditable="true">周三 15:00</span><span class="mtg-name" contenteditable="true">塔罗沙龙洽谈</span><span class="mtg-tag" style="background:#EEEDFE;color:#534AB7">副业</span><button class="mtg-del" onclick="deleteMtg(this)">&times;</button></div>
+      <div class="mtg-row"><span class="mtg-time" contenteditable="true">周五 11:00</span><span class="mtg-name" contenteditable="true">创意方案提案</span><span class="mtg-tag" style="background:#E6F1FB;color:#185FA5">主业</span><button class="mtg-del" onclick="deleteMtg(this)">&times;</button></div>
     </div>
     <button class="add-btn" style="margin-top:10px;font-size:12px" onclick="addMtg()">+ 添加会议</button>
   </div>
@@ -683,9 +690,15 @@ textarea:focus{border-color:#b4b2a9}
       localStorage.removeItem(wbDiary);
     }
     if (localStorage.getItem(wbExeGoal)) {
-      var exe = { goal: localStorage.getItem('wb-exe-goal') || '2', dur: localStorage.getItem('wb-exe-dur') || '30', state: '[]' };
-      try { exe.state = localStorage.getItem('wb-exe-state') || '[]'; } catch(e){}
-      localStorage.setItem('wb-' + WEEK_KEY + '-exe', JSON.stringify(exe));
+      var oldGoal = localStorage.getItem('wb-exe-goal') || '2';
+      var oldDur = localStorage.getItem('wb-exe-dur') || '30';
+      var oldState = [];
+      try { oldState = JSON.parse(localStorage.getItem('wb-exe-state') || '[]'); } catch(e){}
+      var sessions = [];
+      for (var ii = 0; ii < oldState.length; ii++) {
+        sessions.push({duration: parseInt(oldDur) || 30, note: '', done: !!oldState[ii]});
+      }
+      localStorage.setItem('wb-' + WEEK_KEY + '-exe', JSON.stringify({goal: oldGoal, sessions: sessions}));
       localStorage.removeItem('wb-exe-goal');
       localStorage.removeItem('wb-exe-dur');
       localStorage.removeItem('wb-exe-state');
@@ -856,6 +869,7 @@ textarea:focus{border-color:#b4b2a9}
     updateStats();
     loadSleepData();
     loadExeData();
+    loadMtgs();
   })();
 
   window.toggleVideo = function(idx){
@@ -1014,79 +1028,192 @@ textarea:focus{border-color:#b4b2a9}
   }
 
   // ===== 生活管理：健身追踪 =====
-  window.updateExeDots = function(){
-    var goal = parseInt(document.getElementById('exe-goal').value) || 0;
-    var dur = parseInt(document.getElementById('exe-duration').value) || 30;
-    var container = document.getElementById('exe-dots');
-    var currentState = [];
-    var existing = container.querySelectorAll('.exe-dot');
-    for (var i = 0; i < existing.length; i++) {
-      currentState.push(existing[i].classList.contains('done'));
-    }
-    container.innerHTML = '';
-    for (var i = 0; i < goal; i++) {
-      var dot = document.createElement('div');
-      dot.className = 'exe-dot' + (currentState[i] ? ' done' : '');
-      dot.setAttribute('onclick', 'toggleExeDot(this)');
-      container.appendChild(dot);
-    }
-    document.getElementById('exe-total-min').textContent = goal * dur;
-    updateExeStats();
-    saveExeData();
-  };
-
-  window.toggleExeDot = function(dot){
-    dot.classList.toggle('done');
-    updateExeStats();
-    saveExeData();
-  };
-
-  function updateExeStats(){
-    var dots = document.querySelectorAll('#exe-dots .exe-dot.done');
-    var dur = parseInt(document.getElementById('exe-duration').value) || 30;
-    document.getElementById('exe-done').textContent = dots.length;
-    document.getElementById('ls-exe-count').textContent = dots.length;
-    document.getElementById('ls-exe-min').textContent = dots.length * dur;
-    document.getElementById('s-exe').textContent = dots.length + '次';
+  function getExeData(){
+    try {
+      var raw = localStorage.getItem('wb-' + WEEK_KEY + '-exe');
+      if (!raw) return {goal: 3, sessions: []};
+      return JSON.parse(raw);
+    } catch(e) { return {goal: 3, sessions: []}; }
   }
 
   function saveExeData(){
-    var state = [];
-    var dots = document.querySelectorAll('#exe-dots .exe-dot');
-    for (var i = 0; i < dots.length; i++) state.push(dots[i].classList.contains('done'));
-    try {
-      var exe = { goal: document.getElementById('exe-goal').value, dur: document.getElementById('exe-duration').value, state: state };
-      localStorage.setItem('wb-' + WEEK_KEY + '-exe', JSON.stringify(exe));
-      autoSyncPush();
-    } catch(e) {}
+    var exeContainer = document.getElementById('exe-sessions');
+    if (!exeContainer) return;
+    var rows = exeContainer.querySelectorAll('.exe-session');
+    var sessions = [];
+    for (var i = 0; i < rows.length; i++) {
+      var row = rows[i];
+      var dot = row.querySelector('.exe-dot');
+      var dur = row.querySelector('.exe-dur-input');
+      var note = row.querySelector('.exe-note-input');
+      sessions.push({
+        duration: parseInt(dur ? dur.value : 30) || 30,
+        note: note ? note.value : '',
+        done: dot ? dot.classList.contains('done') : false
+      });
+    }
+    var goal = document.getElementById('exe-goal').value || '3';
+    localStorage.setItem('wb-' + WEEK_KEY + '-exe', JSON.stringify({goal: goal, sessions: sessions}));
+    updateExeStats();
+    autoSyncPush();
   }
+
+  function renderExeSessions(data){
+    var container = document.getElementById('exe-sessions');
+    if (!container) return;
+    var sessions = data.sessions || [];
+    var goal = parseInt(data.goal) || 3;
+    document.getElementById('exe-goal').value = goal;
+    document.getElementById('exe-goal-display').textContent = goal;
+
+    while (sessions.length < goal) {
+      sessions.push({duration: 30, note: '', done: false});
+    }
+
+    container.innerHTML = '';
+    for (var i = 0; i < sessions.length; i++) {
+      var s = sessions[i];
+      var durVal = s.duration || 30;
+      var row = document.createElement('div');
+      row.className = 'exe-session';
+      row.setAttribute('data-idx', i);
+
+      var doneClass = s.done ? ' done' : '';
+      row.innerHTML = '<span class="exe-seq">第' + (i + 1) + '次</span>' +
+        '<div class="exe-dot' + doneClass + '" onclick="toggleExeSession(this)"></div>' +
+        '<input type="number" class="exe-dur-input" value="' + durVal + '" min="5" max="300" onchange="saveExeData()" onfocus="this.select()">' +
+        '<span style="font-size:11px;color:var(--color-text-secondary);flex-shrink:0">分钟</span>' +
+        '<input type="text" class="exe-note-input" value="' + escapeHtml(s.note || '') + '" placeholder="练了什么？感受如何？" onchange="saveExeData()">' +
+        '<button class="exe-del" onclick="deleteExeSession(this)">&times;</button>';
+      container.appendChild(row);
+    }
+
+    updateExeStats();
+  }
+
+  function updateExeStats(){
+    var rows = document.querySelectorAll('#exe-sessions .exe-session');
+    var done = 0, totalMin = 0;
+    for (var i = 0; i < rows.length; i++) {
+      var row = rows[i];
+      if (row.querySelector('.exe-dot.done')) done++;
+      var durEl = row.querySelector('.exe-dur-input');
+      totalMin += parseInt(durEl ? durEl.value : 30) || 0;
+    }
+    document.getElementById('exe-done').textContent = done;
+    document.getElementById('exe-total-min').textContent = totalMin;
+    document.getElementById('ls-exe-count').textContent = done;
+    document.getElementById('ls-exe-min').textContent = totalMin;
+    document.getElementById('s-exe').textContent = done + '次';
+  }
+
+  window.updateExeSessions = function(){
+    saveExeData();
+    renderExeSessions(getExeData());
+  };
+
+  window.toggleExeSession = function(dot){
+    dot.classList.toggle('done');
+    saveExeData();
+  };
+
+  window.deleteExeSession = function(btn){
+    var row = btn.parentElement;
+    row.remove();
+    saveExeData();
+  };
+
+  window.addExeSession = function(){
+    var rows = document.querySelectorAll('#exe-sessions .exe-session');
+    var s = {duration: 30, note: '', done: false};
+    var idx = rows.length + 1;
+    var container = document.getElementById('exe-sessions');
+    var row = document.createElement('div');
+    row.className = 'exe-session';
+    row.setAttribute('data-idx', idx - 1);
+    row.innerHTML = '<span class="exe-seq">第' + idx + '次</span>' +
+      '<div class="exe-dot" onclick="toggleExeSession(this)"></div>' +
+      '<input type="number" class="exe-dur-input" value="30" min="5" max="300" onchange="saveExeData()" onfocus="this.select()">' +
+      '<span style="font-size:11px;color:var(--color-text-secondary);flex-shrink:0">分钟</span>' +
+      '<input type="text" class="exe-note-input" placeholder="练了什么？感受如何？" onchange="saveExeData()">' +
+      '<button class="exe-del" onclick="deleteExeSession(this)">&times;</button>';
+    container.appendChild(row);
+    saveExeData();
+  };
 
   function loadExeData(){
-    try {
-      var raw = localStorage.getItem('wb-' + WEEK_KEY + '-exe');
-      if (!raw) return;
-      var exe = JSON.parse(raw);
-      if (exe.goal) document.getElementById('exe-goal').value = exe.goal;
-      if (exe.dur) document.getElementById('exe-duration').value = exe.dur;
-      updateExeDots();
-      if (exe.state && Array.isArray(exe.state)) {
-        var dots = document.querySelectorAll('#exe-dots .exe-dot');
-        for (var i = 0; i < Math.min(dots.length, exe.state.length); i++) {
-          if (exe.state[i]) dots[i].classList.add('done');
-        }
-        updateExeStats();
-      }
-    } catch(e) {}
+    var d = getExeData();
+    renderExeSessions(d);
   }
 
+
+  // ===== 会议日程：添加/删除 =====
   window.addMtg = function(){
     var list = document.getElementById('mtg-list');
     var row = document.createElement('div');
     row.className = 'mtg-row';
-    row.innerHTML = '<span class="mtg-time" contenteditable="true">日期 时间</span><span class="mtg-name" contenteditable="true">会议/事项名称</span><span class="mtg-tag" style="background:#F1EFE8;color:#5F5E5A">其他</span>';
+    row.innerHTML = '<span class="mtg-time" contenteditable="true">日期 时间</span><span class="mtg-name" contenteditable="true">会议/事项名称</span><span class="mtg-tag" style="background:#F1EFE8;color:#5F5E5A">其他</span><button class="mtg-del" onclick="deleteMtg(this)">&times;</button>';
     list.appendChild(row);
     row.querySelector('.mtg-name').focus();
+    saveMtgs();
   };
+
+  window.deleteMtg = function(btn){
+    var row = btn.parentElement;
+    row.remove();
+    saveMtgs();
+  };
+
+  function saveMtgs(){
+    var rows = document.querySelectorAll('#mtg-list .mtg-row');
+    var data = [];
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      var time = r.querySelector('.mtg-time');
+      var name = r.querySelector('.mtg-name');
+      var tag = r.querySelector('.mtg-tag');
+      data.push({
+        time: time ? time.textContent.trim() : '',
+        name: name ? name.textContent.trim() : '',
+        tag: tag ? tag.textContent.trim() : '其他',
+        bg: tag ? (tag.style.background || '#F1EFE8') : '#F1EFE8',
+        color: tag ? (tag.style.color || '#5F5E5A') : '#5F5E5A'
+      });
+    }
+    localStorage.setItem('wb-' + WEEK_KEY + '-mtgs', JSON.stringify(data));
+  }
+
+  function loadMtgs(){
+    try {
+      var raw = localStorage.getItem('wb-' + WEEK_KEY + '-mtgs');
+      if (!raw) {
+        // Wire up blur listeners on hardcoded rows
+        var existingRows = document.querySelectorAll('#mtg-list .mtg-row [contenteditable]');
+        for (var e = 0; e < existingRows.length; e++) {
+          existingRows[e].addEventListener('blur', saveMtgs);
+        }
+        return;
+      }
+      var data = JSON.parse(raw);
+      if (!Array.isArray(data) || data.length === 0) return;
+      var list = document.getElementById('mtg-list');
+      list.innerHTML = '';
+      for (var i = 0; i < data.length; i++) {
+        var m = data[i];
+        var row = document.createElement('div');
+        row.className = 'mtg-row';
+        row.innerHTML = '<span class="mtg-time" contenteditable="true">' + escapeHtml(m.time || '') + '</span>' +
+          '<span class="mtg-name" contenteditable="true">' + escapeHtml(m.name || '') + '</span>' +
+          '<span class="mtg-tag" style="background:' + (m.bg || '#F1EFE8') + ';color:' + (m.color || '#5F5E5A') + '">' + escapeHtml(m.tag || '其他') + '</span>' +
+          '<button class="mtg-del" onclick="deleteMtg(this)">&times;</button>';
+        list.appendChild(row);
+        var editable = row.querySelectorAll('[contenteditable]');
+        for (var e = 0; e < editable.length; e++) {
+          editable[e].addEventListener('blur', saveMtgs);
+        }
+      }
+    } catch(e) {}
+  }
 
   window.showTab = function(name){
     var sections = document.querySelectorAll('.section');
