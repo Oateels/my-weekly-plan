@@ -1,0 +1,29 @@
+{
+  "name": "我的工作周计划",
+  "short_name": "周计划",
+  "description": "个人工作周计划 - 任务管理、塔罗指引、资讯聚合",
+  "start_url": "/my-weekly-plan/",
+  "scope": "/my-weekly-plan/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f0f0ed",
+  "theme_color": "#7F77DD",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
