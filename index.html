@@ -263,10 +263,14 @@ textarea:focus{border-color:#b4b2a9}
   <div class="sync-setup-inner">
     <div style="font-size:13px;font-weight:500;margin-bottom:8px">🔑 云同步设置</div>
     <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:10px">
-      输入 GitHub Token 开启自动云同步。<br>
+      输入 GitHub Token 和仓库地址开启自动云同步。<br>
       数据存储在仓库 <b>data.json</b> 中，Mac 和手机自动互通。<br>
+      和朋友共用一个网页？每人用<b>自己的仓库</b>就不会数据打架。<br>
       <a href="https://github.com/settings/tokens" target="_blank" style="color:#378ADD">获取 Token →</a>（勾选 repo 权限即可）
     </div>
+    <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px">GitHub 仓库（格式：用户名/仓库名）</div>
+    <input type="text" id="sync-repo-input" placeholder="Oateels/my-weekly-plan" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:12px;margin-bottom:8px">
+    <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px">GitHub Token</div>
     <input type="password" id="sync-token-input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:12px;font-family:monospace;margin-bottom:8px">
     <div style="display:flex;gap:6px;justify-content:flex-end">
       <button onclick="document.getElementById('sync-setup').style.display='none'" class="sync-btn">取消</button>
@@ -1669,15 +1673,18 @@ textarea:focus{border-color:#b4b2a9}
   };
 
   // ===== 数据云同步（GitHub API 自动同步） =====
-  var SYNC_REPO = 'Oateels/my-weekly-plan';
+  function getSyncRepo(){
+    return localStorage.getItem('wb-sync-repo') || 'Oateels/my-weekly-plan';
+  }
   var SYNC_FILE = 'data.json';
   var SYNC_DEBOUNCE = 8000; // 8 秒防抖
 
   function getAllData(){
     var data = { _version: 2, _exportedAt: new Date().toISOString(), _weekKey: WEEK_KEY };
+    var SKIP = ['wb-sync-token', 'wb-sync-sha', 'wb-sync-last', 'wb-sync-repo'];
     for (var i = 0; i < localStorage.length; i++) {
       var key = localStorage.key(i);
-      if (key.indexOf('wb-') === 0) {
+      if (key.indexOf('wb-') === 0 && SKIP.indexOf(key) === -1) {
         try { data[key] = JSON.parse(localStorage.getItem(key)); } catch(e) { data[key] = localStorage.getItem(key); }
       }
     }
@@ -1738,7 +1745,7 @@ textarea:focus{border-color:#b4b2a9}
 
     updateSyncStatus('<span class="sync-spin">⏳</span> 拉取中...', true);
 
-    fetch('https://api.github.com/repos/' + SYNC_REPO + '/contents/' + SYNC_FILE, {
+    fetch('https://api.github.com/repos/' + getSyncRepo() + '/contents/' + SYNC_FILE, {
       headers: { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github.v3+json' }
     })
     .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
@@ -1791,7 +1798,7 @@ textarea:focus{border-color:#b4b2a9}
 
     var body = JSON.stringify({ message: '自动同步 ' + data._updatedAt, content: content, sha: sha });
 
-    fetch('https://api.github.com/repos/' + SYNC_REPO + '/contents/' + SYNC_FILE, {
+    fetch('https://api.github.com/repos/' + getSyncRepo() + '/contents/' + SYNC_FILE, {
       method: 'PUT',
       headers: { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
       body: body
@@ -1825,16 +1832,22 @@ textarea:focus{border-color:#b4b2a9}
     panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
     var input = document.getElementById('sync-token-input');
     if (input) input.value = getSyncToken();
+    var repo = document.getElementById('sync-repo-input');
+    if (repo) repo.value = getSyncRepo();
   };
 
   window.saveSyncToken = function(){
     var token = document.getElementById('sync-token-input').value.trim();
+    var repo = document.getElementById('sync-repo-input').value.trim();
+    if (!repo) { alert('请输入 GitHub 仓库地址'); return; }
+    if (repo.indexOf('/') === -1) { alert('仓库格式应为 用户名/仓库名'); return; }
     if (!token) { alert('请输入 GitHub Token'); return; }
     if (token.indexOf('ghp_') !== 0) { alert('Token 格式不正确，应以 ghp_ 开头'); return; }
+    localStorage.setItem('wb-sync-repo', repo);
     localStorage.setItem('wb-sync-token', token);
     document.getElementById('sync-setup').style.display = 'none';
     updateSyncStatus();
-    cloudPull(function(ok){ if (ok) location.reload(); });
+    cloudPull(function(ok, mergedCount){ if (ok && mergedCount > 0) location.reload(); });
   };
 
   // 导出/导入（保留）
@@ -1872,7 +1885,7 @@ textarea:focus{border-color:#b4b2a9}
           var keys = Object.keys(imported).filter(function(k){ return k.indexOf('wb-') === 0; });
           for (var i = 0; i < keys.length; i++) {
             var key = keys[i];
-            if (key === 'wb-sync-last' || key === 'wb-sync-sha' || key === 'wb-sync-token') continue;
+            if (key === 'wb-sync-last' || key === 'wb-sync-sha' || key === 'wb-sync-token' || key === 'wb-sync-repo') continue;
             var existing = localStorage.getItem(key);
             var importedVal = imported[key];
             if (!existing) {
