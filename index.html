@@ -1298,7 +1298,6 @@ textarea:focus{border-color:#b4b2a9}
     if (!container) return;
     var sessions = data.sessions || [];
     var goal = parseInt(data.goal) || 3;
-    document.getElementById('exe-goal').value = goal;
     document.getElementById('exe-goal-display').textContent = goal;
 
     while (sessions.length < goal) {
@@ -1322,6 +1321,10 @@ textarea:focus{border-color:#b4b2a9}
         '<button class="exe-del" onclick="deleteExeSession(this)">&times;</button>';
       container.appendChild(row);
     }
+
+    // v17: 必须在 session DOM 构建完之后再设置 goal value，
+    // 否则 onchange="updateExeSessions()" 会触发 saveExeData() 读到空 DOM，覆盖已保存的正确数据
+    document.getElementById('exe-goal').value = goal;
 
     updateExeStats();
   }
@@ -2580,10 +2583,10 @@ textarea:focus{border-color:#b4b2a9}
 </script>
 
 <!-- 静态调试标记：如果刷新后能看到这个，说明 HTML 已加载最新版 -->
-<div id="v16-debug" style="position:fixed;bottom:4px;right:4px;font-size:11px;color:#fff;background:#1D9E75;padding:3px 8px;border-radius:4px;z-index:99999;pointer-events:none;font-family:monospace">v16</div>
+<div id="v17-debug" style="position:fixed;bottom:4px;right:4px;font-size:11px;color:#fff;background:#1D9E75;padding:3px 8px;border-radius:4px;z-index:99999;pointer-events:none;font-family:monospace">v17</div>
 
 <script>
-// ===== v15：数据持久化 —— 最简方案，放在页面最后 =====
+// ===== v17：数据持久化 —— 最简方案，放在页面最后 =====
 (function() {
   // —— 周 key 计算 ——
   var d = new Date();
@@ -2622,8 +2625,8 @@ textarea:focus{border-color:#b4b2a9}
   }
 
   // —— 更新调试标记为带时间戳 ——
-  var dbg = document.getElementById('v16-debug');
-  if (dbg) dbg.textContent = 'v16 ' + ts();
+  var dbg = document.getElementById('v17-debug');
+  if (dbg) dbg.textContent = 'v17 ' + ts();
 
   // —— 事件委托：input ——
   document.addEventListener('input', function(e) {
@@ -2638,12 +2641,12 @@ textarea:focus{border-color:#b4b2a9}
     if (e.target && e.target.id && F.indexOf(e.target.id) >= 0) svFans();
   });
 
-  console.log('[v16] exe fix, wk=' + wk);
+  console.log('[v17] exe render-order fix, wk=' + wk);
 })();
 
 // —— Service Worker（如果存在） ——
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('service-worker.js?v=4')
+  navigator.serviceWorker.register('service-worker.js?v=5')
     .then(function(reg) { console.log('SW registered:', reg.scope); })
     .catch(function(err) { console.log('SW failed:', err); });
 }
