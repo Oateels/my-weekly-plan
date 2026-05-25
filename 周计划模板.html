@@ -632,7 +632,7 @@ textarea:focus{border-color:#b4b2a9}
   </div>
 
   <div class="card">
-    <div class="sec-label">💪 本周健身记录</div>
+    <div class="sec-label">💪 本周健身记录 <span id="exe-load-debug" style="font-size:11px;color:#999;margin-left:10px;font-weight:normal"></span></div>
     <div style="margin-bottom:10px;display:flex;align-items:center;gap:10px">
       <span style="font-size:12px;color:var(--color-text-secondary)">本周目标：</span>
       <input type="number" class="sleep-input" id="exe-goal" value="3" min="0" max="14" style="width:50px" onchange="updateExeSessions()">
@@ -918,7 +918,7 @@ textarea:focus{border-color:#b4b2a9}
     for (var i = 0; i < tasks.length; i++) { setupTask(tasks[i]); }
     updateStats();
     loadSleepData();
-    loadExeData();
+    setTimeout(loadExeData, 0);  // 异步执行，确保 DOM 已解析
     loadMtgs();
     loadGoals();
     loadInspo();
@@ -1231,12 +1231,42 @@ textarea:focus{border-color:#b4b2a9}
   }
 
   // ===== 生活管理：健身追踪 =====
+  function getExeWeekKey(){
+    // 返回本周一日期 YYYY-MM-DD 作为周唯一标识（避免周日/周一0点边界问题）
+    var now = new Date();
+    var day = now.getDay(); // 0=周日, 1=周一, ..., 6=周六
+    var monday = new Date(now);
+    monday.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+    var y = monday.getFullYear(), m = monday.getMonth()+1, d = monday.getDate();
+    return y + '-' + (m<10?'0':'') + m + '-' + (d<10?'0':'') + d;
+  }
+
   function getExeData(){
     try {
-      var raw = localStorage.getItem('wb-' + WEEK_KEY + '-exe');
+      var wk = getExeWeekKey();
+      var raw = localStorage.getItem('wb-' + wk + '-exe');
+      console.log('[LOAD] getExeData: wk=' + wk + ', key=wb-' + wk + '-exe, raw=', raw ? raw.substring(0,80) : 'null');
+      if (!raw) {
+        // 兼容旧格式：尝试 YYYY-WNN 格式
+        var oldWk = getWeekKey();
+        raw = localStorage.getItem('wb-' + oldWk + '-exe');
+        if (raw) console.log('[LOAD] Found old-format data, wk=' + oldWk);
+      }
+      if (!raw) {
+        // 兜底：当前周没数据，尝试找最近有数据的周（最多往前找4周）
+        for (var w = 1; w <= 4; w++) {
+          var d2 = new Date(); d2.setDate(d2.getDate() - w * 7);
+          var key = 'wb-' + d2.getFullYear() + '-' + (function(){
+            var jan1 = new Date(d2.getFullYear(),0,1);
+            return Math.ceil((Math.floor((d2-jan1)/86400000)+jan1.getDay()+1)/7);
+          })() + '-exe';
+          var r = localStorage.getItem(key);
+          if (r) { console.log('[LOAD] Found data in nearby week:', key); raw = r; break; }
+        }
+      }
       if (!raw) return {goal: 3, sessions: []};
       return JSON.parse(raw);
-    } catch(e) { return {goal: 3, sessions: []}; }
+    } catch(e) { console.error('[LOAD] getExeData ERROR:', e); return {goal: 3, sessions: []}; }
   }
 
   function saveExeData(){
@@ -1256,7 +1286,9 @@ textarea:focus{border-color:#b4b2a9}
       });
     }
     var goal = document.getElementById('exe-goal').value || '3';
-    localStorage.setItem('wb-' + WEEK_KEY + '-exe', JSON.stringify({goal: goal, sessions: sessions}));
+    var wk = getExeWeekKey();
+    localStorage.setItem('wb-' + wk + '-exe', JSON.stringify({goal: goal, sessions: sessions}));
+    console.log('[SAVE] exe saved, wk=' + wk + ', key=wb-' + wk + '-exe', {goal: goal, sessions: sessions});
     updateExeStats();
     autoSyncPush();
   }
@@ -1345,8 +1377,18 @@ textarea:focus{border-color:#b4b2a9}
   };
 
   function loadExeData(){
+    console.log('[LOAD] loadExeData called, WEEK_KEY=', WEEK_KEY, 'exeWk=', getExeWeekKey());
+    var container = document.getElementById('exe-sessions');
+    if (!container) {
+      console.warn('[LOAD] exe-sessions not found, retrying in 100ms');
+      setTimeout(loadExeData, 100);
+      return;
+    }
     var d = getExeData();
+    console.log('[LOAD] getExeData returned:', d);
     renderExeSessions(d);
+    var dbg = document.getElementById('exe-load-debug');
+    if (dbg) dbg.textContent = 'load:' + (d.sessions ? d.sessions.length : 0) + ' sessions, wk=' + getExeWeekKey();
   }
 
 
@@ -2538,7 +2580,7 @@ textarea:focus{border-color:#b4b2a9}
 </script>
 
 <!-- 静态调试标记：如果刷新后能看到这个，说明 HTML 已加载最新版 -->
-<div id="v15-debug" style="position:fixed;bottom:4px;right:4px;font-size:11px;color:#fff;background:#1D9E75;padding:3px 8px;border-radius:4px;z-index:99999;pointer-events:none;font-family:monospace">v15 OK</div>
+<div id="v16-debug" style="position:fixed;bottom:4px;right:4px;font-size:11px;color:#fff;background:#1D9E75;padding:3px 8px;border-radius:4px;z-index:99999;pointer-events:none;font-family:monospace">v16</div>
 
 <script>
 // ===== v15：数据持久化 —— 最简方案，放在页面最后 =====
@@ -2580,8 +2622,8 @@ textarea:focus{border-color:#b4b2a9}
   }
 
   // —— 更新调试标记为带时间戳 ——
-  var dbg = document.getElementById('v15-debug');
-  if (dbg) dbg.textContent = 'v15 OK ' + ts();
+  var dbg = document.getElementById('v16-debug');
+  if (dbg) dbg.textContent = 'v16 ' + ts();
 
   // —— 事件委托：input ——
   document.addEventListener('input', function(e) {
@@ -2596,12 +2638,12 @@ textarea:focus{border-color:#b4b2a9}
     if (e.target && e.target.id && F.indexOf(e.target.id) >= 0) svFans();
   });
 
-  console.log('[v15] 数据持久化已就绪, wk=' + wk);
+  console.log('[v16] exe fix, wk=' + wk);
 })();
 
 // —— Service Worker（如果存在） ——
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('service-worker.js?v=3')
+  navigator.serviceWorker.register('service-worker.js?v=4')
     .then(function(reg) { console.log('SW registered:', reg.scope); })
     .catch(function(err) { console.log('SW failed:', err); });
 }
