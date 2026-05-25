@@ -544,22 +544,22 @@ textarea:focus{border-color:#b4b2a9}
     <div class="sec-label">💡 内容灵感速记</div>
     <div id="inspo-list">
       <div class="inspo-entry">
-        <div class="inspo-header"><span class="inspo-idx">①</span><input class="inspo-title" placeholder="视频标题" value="" onchange="saveInspo()"><button class="inspo-del" onclick="deleteInspo(this)">&times;</button></div>
-        <div class="inspo-body-wrap"><textarea class="inspo-body" placeholder="大致内容、拍摄思路…" onchange="saveInspo()" rows="2"></textarea></div>
+        <div class="inspo-header"><span class="inspo-idx">①</span><input class="inspo-title" placeholder="视频标题" value=""><button class="inspo-del" onclick="deleteInspo(this)">&times;</button></div>
+        <div class="inspo-body-wrap"><textarea class="inspo-body" placeholder="大致内容、拍摄思路…" rows="2"></textarea></div>
       </div>
       <div class="inspo-entry">
-        <div class="inspo-header"><span class="inspo-idx">②</span><input class="inspo-title" placeholder="视频标题" value="" onchange="saveInspo()"><button class="inspo-del" onclick="deleteInspo(this)">&times;</button></div>
-        <div class="inspo-body-wrap"><textarea class="inspo-body" placeholder="大致内容、拍摄思路…" onchange="saveInspo()" rows="2"></textarea></div>
+        <div class="inspo-header"><span class="inspo-idx">②</span><input class="inspo-title" placeholder="视频标题" value=""><button class="inspo-del" onclick="deleteInspo(this)">&times;</button></div>
+        <div class="inspo-body-wrap"><textarea class="inspo-body" placeholder="大致内容、拍摄思路…" rows="2"></textarea></div>
       </div>
       <div class="inspo-entry">
-        <div class="inspo-header"><span class="inspo-idx">③</span><input class="inspo-title" placeholder="视频标题" value="" onchange="saveInspo()"><button class="inspo-del" onclick="deleteInspo(this)">&times;</button></div>
-        <div class="inspo-body-wrap"><textarea class="inspo-body" placeholder="大致内容、拍摄思路…" onchange="saveInspo()" rows="2"></textarea></div>
+        <div class="inspo-header"><span class="inspo-idx">③</span><input class="inspo-title" placeholder="视频标题" value=""><button class="inspo-del" onclick="deleteInspo(this)">&times;</button></div>
+        <div class="inspo-body-wrap"><textarea class="inspo-body" placeholder="大致内容、拍摄思路…" rows="2"></textarea></div>
       </div>
     </div>
     <button class="add-btn" style="margin-top:8px;font-size:12px" onclick="addInspo()">+ 添加灵感</button>
   </div>
   <div class="card">
-    <div class="sec-label">📊 各平台粉丝数据</div>
+    <div class="sec-label">📊 各平台粉丝数据 <span id="fans-save-status" style="font-size:11px;color:#999;margin-left:10px;font-weight:normal"></span></div>
     <div class="fans-grid">
       <div class="fan-card">
         <div class="fan-platform" style="color:#E24B4A">抖音</div>
@@ -584,8 +584,8 @@ textarea:focus{border-color:#b4b2a9}
     </div>
   </div>
   <div class="card" style="margin-bottom:14px">
-    <div class="sec-label">📋 本周自媒体复盘</div>
-    <textarea id="media-review" placeholder="回顾本周自媒体表现：&#10;&#10;📈 数据亮点：&#10;...&#10;&#10;📉 不足之处：&#10;...&#10;&#10;💡 改进方向：&#10;...&#10;&#10;🎯 下周重点：&#10;..." onchange="saveMediaReview()" rows="6"></textarea>
+    <div class="sec-label">📋 本周自媒体复盘 <span id="review-save-status" style="font-size:11px;color:#999;margin-left:10px;font-weight:normal"></span></div>
+    <textarea id="media-review" placeholder="回顾本周自媒体表现：&#10;&#10;📈 数据亮点：&#10;...&#10;&#10;📉 不足之处：&#10;...&#10;&#10;💡 改进方向：&#10;...&#10;&#10;🎯 下周重点：&#10;..." rows="6"></textarea>
   </div>
 </div>
 
@@ -931,49 +931,156 @@ textarea:focus{border-color:#b4b2a9}
     updateStats();
   };
 
-  // ===== 粉丝数据持久化（定时轮询，不依赖事件） =====
-  var FANS_IDS = ['dy-last','dy-cur','xhs-last','xhs-cur','xhs-orders','sph-last','sph-cur'];
-  var _fansCache = ''; // 上一次保存的快照，避免重复写 localStorage
+  // ===== 自媒体模块：数据持久化（v13 事件委托 + 无缓存直存） =====
+  var FANS_IDS = window.FANS_IDS = ['dy-last','dy-cur','xhs-last','xhs-cur','xhs-orders','sph-last','sph-cur'];
 
+  // ── 状态指示器更新 ──
+  function showStatus(elId, ok){
+    var st = document.getElementById(elId);
+    if (!st) return;
+    var now = new Date();
+    var ts = [now.getHours(), now.getMinutes(), now.getSeconds()].map(function(x){ return (x<10?'0':'')+x; }).join(':');
+    st.textContent = (ok ? '✓ 已存 ' : '✗ 失败 ') + ts;
+    st.style.color = ok ? '#1D9E75' : '#E24B4A';
+  }
+
+  // ── 读粉丝 ──
   function readFanValues(){
     var data = {};
-    FANS_IDS.forEach(function(id){
-      var el = document.getElementById(id);
-      if (!el) return;
-      var v = el.value.trim();
-      data[id] = v === '' ? -1 : parseFloat(v);
-    });
+    for (var i = 0; i < FANS_IDS.length; i++) {
+      var el = document.getElementById(FANS_IDS[i]);
+      data[FANS_IDS[i]] = (el && el.value !== '') ? parseFloat(el.value) || 0 : -1;
+    }
     return data;
   }
 
-  function saveFans(){
-    var data = readFanValues();
-    var s = JSON.stringify(data);
-    if (s === _fansCache) return; // 没变化，跳过
-    _fansCache = s;
-    localStorage.setItem('wb-' + WEEK_KEY + '-fans', s);
-    // 数字变了就更新增长计算
-    calcGrowth('dy'); calcGrowth('xhs'); calcGrowth('sph');
+  // ── 存粉丝 ──
+  var saveFans = window.saveFans = function(){
+    try {
+      var data = readFanValues();
+      var s = JSON.stringify(data);
+      localStorage.setItem('wb-' + WEEK_KEY + '-fans', s);
+      calcGrowth('dy'); calcGrowth('xhs'); calcGrowth('sph');
+      showStatus('fans-save-status', true);
+      console.log('[SAVE] fans -> localStorage key=wb-' + WEEK_KEY + '-fans', data);
+    } catch(e) {
+      showStatus('fans-save-status', false);
+      console.error('[SAVE] fans FAILED', e);
+    }
   }
 
+  // ── 读粉丝 ──
   function loadFans(){
     try {
       var raw = localStorage.getItem('wb-' + WEEK_KEY + '-fans');
+      console.log('[LOAD] fans raw from localStorage:', raw ? raw.substring(0,100) : 'null');
       if (!raw) return;
       var data = JSON.parse(raw);
-      FANS_IDS.forEach(function(id){
-        var el = document.getElementById(id);
-        if (!el || data[id] === undefined) return;
-        el.value = data[id] === -1 ? '' : data[id];
-      });
-      _fansCache = raw; // 初始快照
+      for (var i = 0; i < FANS_IDS.length; i++) {
+        var el = document.getElementById(FANS_IDS[i]);
+        var v = data[FANS_IDS[i]];
+        if (el && v !== undefined) el.value = (v === -1) ? '' : v;
+      }
       calcGrowth('dy'); calcGrowth('xhs'); calcGrowth('sph');
-    } catch(e) {}
+      console.log('[LOAD] fans loaded OK');
+    } catch(e) { console.error('[LOAD] fans FAILED', e); }
   }
 
-  // 每 2 秒轮询一次输入框，有变化就保存
-  setInterval(saveFans, 2000);
+  // ── 内容灵感速记 ──
+  window.addInspo = function() {
+    var list = document.getElementById('inspo-list');
+    var entries = list.querySelectorAll('.inspo-entry');
+    var n = entries.length + 1;
+    var nums = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫','⑬','⑭','⑮'];
+    var num = nums[n - 1] || n;
+    var entry = document.createElement('div');
+    entry.className = 'inspo-entry';
+    entry.innerHTML = '<div class="inspo-header"><span class="inspo-idx">' + num + '</span>' +
+      '<input class="inspo-title" placeholder="视频标题" value="">' +
+      '<button class="inspo-del" onclick="deleteInspo(this)">&times;</button></div>' +
+      '<div class="inspo-body-wrap"><textarea class="inspo-body" placeholder="大致内容、拍摄思路…" rows="2"></textarea></div>';
+    list.appendChild(entry);
+    entry.querySelector('.inspo-title').focus();
+  };
 
+  window.deleteInspo = function(btn) {
+    var entry = btn.closest('.inspo-entry');
+    if (!entry) return;
+    entry.remove();
+    var entries = document.querySelectorAll('#inspo-list .inspo-entry');
+    var nums = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫','⑬','⑭','⑮'];
+    for (var i = 0; i < entries.length; i++) {
+      var idx = entries[i].querySelector('.inspo-idx');
+      if (idx) idx.textContent = nums[i] || (i + 1);
+    }
+    saveInspo();
+  };
+
+  window.saveInspo = function() {
+    try {
+      var entries = document.querySelectorAll('#inspo-list .inspo-entry');
+      var data = [];
+      for (var i = 0; i < entries.length; i++) {
+        var title = entries[i].querySelector('.inspo-title');
+        var body = entries[i].querySelector('.inspo-body');
+        data.push({
+          title: title ? title.value : '',
+          body: body ? body.value : ''
+        });
+      }
+      localStorage.setItem('wb-' + WEEK_KEY + '-inspo', JSON.stringify(data));
+      autoSyncPush();
+      console.log('[SAVE] inspo -> localStorage entries=' + data.length);
+    } catch(e) { console.error('[saveInspo]', e); }
+  };
+
+  function loadInspo() {
+    try {
+      var raw = localStorage.getItem('wb-' + WEEK_KEY + '-inspo');
+      if (!raw) return;
+      var data = JSON.parse(raw);
+      if (!Array.isArray(data) || data.length === 0) return;
+      var list = document.getElementById('inspo-list');
+      list.innerHTML = '';
+      var nums = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫','⑬','⑭','⑮'];
+      for (var i = 0; i < data.length; i++) {
+        var num = nums[i] || (i + 1);
+        var entry = document.createElement('div');
+        entry.className = 'inspo-entry';
+        entry.innerHTML = '<div class="inspo-header"><span class="inspo-idx">' + num + '</span>' +
+          '<input class="inspo-title" placeholder="视频标题" value="' + escapeHtml(data[i].title || '') + '">' +
+          '<button class="inspo-del" onclick="deleteInspo(this)">&times;</button></div>' +
+          '<div class="inspo-body-wrap"><textarea class="inspo-body" placeholder="大致内容、拍摄思路…" rows="2">' + escapeHtml(data[i].body || '') + '</textarea></div>';
+        list.appendChild(entry);
+      }
+    } catch(e) { console.error('[loadInspo]', e); }
+  }
+  // ── 存复盘 ──
+  var saveMediaReview = window.saveMediaReview = function(){
+    try {
+      var ta = document.getElementById('media-review');
+      var val = ta ? ta.value : '';
+      localStorage.setItem('wb-' + WEEK_KEY + '-media-review', val);
+      autoSyncPush();
+      showStatus('review-save-status', true);
+      console.log('[SAVE] review -> localStorage key=wb-' + WEEK_KEY + '-media-review length=' + val.length);
+    } catch(e) {
+      showStatus('review-save-status', false);
+      console.error('[SAVE] review FAILED', e);
+    }
+  }
+
+  // ── 读复盘 ──
+  function loadMediaReview() {
+    try {
+      var ta = document.getElementById('media-review');
+      var saved = localStorage.getItem('wb-' + WEEK_KEY + '-media-review');
+      console.log('[LOAD] review raw from localStorage:', saved ? saved.substring(0,60) : 'null');
+      if (ta && saved !== null && saved !== undefined) ta.value = saved;
+    } catch(e) { console.error('[LOAD] review FAILED', e); }
+  }
+
+  // ── 粉丝增长/差距计算 ──
   function calcGrowth(platform){
     var last = parseFloat(document.getElementById(platform + '-last').value) || 0;
     var cur = parseFloat(document.getElementById(platform + '-cur').value) || 0;
@@ -991,90 +1098,6 @@ textarea:focus{border-color:#b4b2a9}
         gap.style.color = remain > 0 ? '#E24B4A' : '#1D9E75';
       }
     }
-  };
-
-  // ===== 自媒体：内容灵感速记 =====
-  window.addInspo = function() {
-    var list = document.getElementById('inspo-list');
-    var entries = list.querySelectorAll('.inspo-entry');
-    var n = entries.length + 1;
-    var nums = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫','⑬','⑭','⑮'];
-    var num = nums[n - 1] || n;
-    var entry = document.createElement('div');
-    entry.className = 'inspo-entry';
-    entry.innerHTML = '<div class="inspo-header"><span class="inspo-idx">' + num + '</span>' +
-      '<input class="inspo-title" placeholder="视频标题" value="" onchange="saveInspo()">' +
-      '<button class="inspo-del" onclick="deleteInspo(this)">&times;</button></div>' +
-      '<div class="inspo-body-wrap"><textarea class="inspo-body" placeholder="大致内容、拍摄思路…" onchange="saveInspo()" rows="2"></textarea></div>';
-    list.appendChild(entry);
-    entry.querySelector('.inspo-title').focus();
-    saveInspo();
-  };
-
-  window.deleteInspo = function(btn) {
-    var entry = btn.closest('.inspo-entry');
-    if (!entry) return;
-    entry.remove();
-    // Re-number
-    var entries = document.querySelectorAll('#inspo-list .inspo-entry');
-    var nums = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫','⑬','⑭','⑮'];
-    for (var i = 0; i < entries.length; i++) {
-      var idx = entries[i].querySelector('.inspo-idx');
-      if (idx) idx.textContent = nums[i] || (i + 1);
-    }
-    saveInspo();
-  };
-
-  window.saveInspo = function() {
-    var entries = document.querySelectorAll('#inspo-list .inspo-entry');
-    var data = [];
-    for (var i = 0; i < entries.length; i++) {
-      var title = entries[i].querySelector('.inspo-title');
-      var body = entries[i].querySelector('.inspo-body');
-      data.push({
-        title: title ? title.value : '',
-        body: body ? body.value : ''
-      });
-    }
-    localStorage.setItem('wb-' + WEEK_KEY + '-inspo', JSON.stringify(data));
-    autoSyncPush();
-  };
-
-  function loadInspo() {
-    try {
-      var raw = localStorage.getItem('wb-' + WEEK_KEY + '-inspo');
-      if (!raw) return;
-      var data = JSON.parse(raw);
-      if (!Array.isArray(data) || data.length === 0) return;
-      var list = document.getElementById('inspo-list');
-      list.innerHTML = '';
-      var nums = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫','⑬','⑭','⑮'];
-      for (var i = 0; i < data.length; i++) {
-        var num = nums[i] || (i + 1);
-        var entry = document.createElement('div');
-        entry.className = 'inspo-entry';
-        entry.innerHTML = '<div class="inspo-header"><span class="inspo-idx">' + num + '</span>' +
-          '<input class="inspo-title" placeholder="视频标题" value="' + escapeHtml(data[i].title || '') + '" onchange="saveInspo()">' +
-          '<button class="inspo-del" onclick="deleteInspo(this)">&times;</button></div>' +
-          '<div class="inspo-body-wrap"><textarea class="inspo-body" placeholder="大致内容、拍摄思路…" onchange="saveInspo()" rows="2">' + escapeHtml(data[i].body || '') + '</textarea></div>';
-        list.appendChild(entry);
-      }
-    } catch(e) {}
-  }
-
-  // ===== 自媒体：本周复盘 =====
-  window.saveMediaReview = function() {
-    var ta = document.getElementById('media-review');
-    var val = ta ? ta.value : '';
-    localStorage.setItem('wb-' + WEEK_KEY + '-media-review', val);
-    autoSyncPush();
-  };
-
-  function loadMediaReview() {
-    var ta = document.getElementById('media-review');
-    if (!ta) return;
-    var saved = localStorage.getItem('wb-' + WEEK_KEY + '-media-review');
-    if (saved !== null && saved !== undefined) ta.value = saved;
   }
 
   // ===== 生活管理：睡眠曲线 =====
@@ -2512,9 +2535,71 @@ textarea:focus{border-color:#b4b2a9}
 })();
 </script>
 
+<!-- 静态调试标记：如果刷新后能看到这个，说明 HTML 已加载最新版 -->
+<div id="v14-debug" style="position:fixed;bottom:4px;right:4px;font-size:11px;color:#fff;background:#1D9E75;padding:3px 8px;border-radius:4px;z-index:99999;pointer-events:none;font-family:monospace">v14 OK</div>
+
 <script>
+// ===== v14：数据持久化 —— 最简方案，放在页面最后 =====
+(function() {
+  // —— 周 key 计算 ——
+  var d = new Date();
+  var j1 = new Date(d.getFullYear(), 0, 1);
+  var wk = d.getFullYear() + '-W' + Math.ceil((Math.floor((d - j1) / 86400000) + j1.getDay() + 1) / 7);
+
+  // —— 粉丝 ID 列表 ——
+  var F = ['dy-last','dy-cur','xhs-last','xhs-cur','xhs-orders','sph-last','sph-cur'];
+
+  // —— 工具函数 ——
+  function ts() {
+    var t = new Date();
+    return [t.getHours(),t.getMinutes(),t.getSeconds()].map(function(x){return (x<10?'0':'')+x;}).join(':');
+  }
+  function stat(id, ok) {
+    var el = document.getElementById(id);
+    if (el) { el.textContent = (ok ? '✓ ' : '✗ ') + ts(); el.style.color = ok ? '#1D9E75' : '#E24B4A'; }
+  }
+
+  // —— 保存粉丝数据 ——
+  function svFans() {
+    var data = {};
+    for (var i = 0; i < F.length; i++) {
+      var el = document.getElementById(F[i]);
+      data[F[i]] = (el && el.value !== '') ? parseFloat(el.value) || 0 : -1;
+    }
+    localStorage.setItem('wb-' + wk + '-fans', JSON.stringify(data));
+    stat('fans-save-status', true);
+  }
+
+  // —— 保存复盘 ——
+  function svReview() {
+    var ta = document.getElementById('media-review');
+    if (ta) localStorage.setItem('wb-' + wk + '-media-review', ta.value);
+    stat('review-save-status', true);
+  }
+
+  // —— 更新调试标记为带时间戳 ——
+  var dbg = document.getElementById('v14-debug');
+  if (dbg) dbg.textContent = 'v14 OK ' + ts();
+
+  // —— 事件委托：input ——
+  document.addEventListener('input', function(e) {
+    var id = e.target && e.target.id;
+    if (!id) return;
+    if (F.indexOf(id) >= 0) svFans();
+    else if (id === 'media-review') svReview();
+  });
+
+  // —— 事件委托：change（数字输入框补充） ——
+  document.addEventListener('change', function(e) {
+    if (e.target && e.target.id && F.indexOf(e.target.id) >= 0) svFans();
+  });
+
+  console.log('[v14] 数据持久化已就绪, wk=' + wk);
+})();
+
+// —— Service Worker（如果存在） ——
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('service-worker.js?v=2')
+  navigator.serviceWorker.register('service-worker.js?v=3')
     .then(function(reg) { console.log('SW registered:', reg.scope); })
     .catch(function(err) { console.log('SW failed:', err); });
 }
