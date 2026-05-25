@@ -181,6 +181,12 @@ textarea:focus{border-color:#b4b2a9}
 .sync-hint{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:#E24B4A;background:#fff5f5;padding:3px 10px;border-radius:10px;animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}
 
+/* ===== 同步设置面板 ===== */
+.sync-setup{background:#fff;border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px;margin-bottom:10px;box-shadow:0 2px 8px rgba(0,0,0,0.06)}
+.sync-setup-inner{max-width:500px}
+.sync-spin{display:inline-block;animation:spin 1s linear infinite}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+
 /* ===== 塔罗模块 ===== */
 .side-by-side{display:flex;gap:14px;margin-bottom:14px;align-items:stretch}
 .side-by-side .news-side{margin-bottom:0 !important}
@@ -237,10 +243,29 @@ textarea:focus{border-color:#b4b2a9}
 
 <!-- 数据同步栏 -->
 <div class="sync-bar" id="sync-bar">
-  <span class="sync-status" id="sync-status">☁️ 未同步</span>
-  <span class="sync-hint" id="sync-hint" style="display:none">💡 建议导出备份</span>
-  <button class="sync-btn" onclick="exportAllData()" title="导出所有数据为 JSON 文件">📤 导出数据</button>
-  <button class="sync-btn primary" onclick="importData()" title="从 JSON 文件恢复数据">📥 导入数据</button>
+  <span class="sync-status" id="sync-status">☁️ 检查中...</span>
+  <span class="sync-hint" id="sync-hint" style="display:none">🔑 首次使用请设置同步</span>
+  <button class="sync-btn" id="sync-btn-setup" onclick="showSyncSetup()" style="display:none">⚙️ 设置</button>
+  <button class="sync-btn primary" id="sync-btn-push" onclick="cloudPush()" style="display:none">☁️ 立即同步</button>
+  <button class="sync-btn" onclick="exportAllData()" title="导出所有数据为 JSON 文件">📤 导出</button>
+  <button class="sync-btn" onclick="importData()" title="从 JSON 文件恢复数据">📥 导入</button>
+</div>
+
+<!-- 同步设置面板 -->
+<div class="sync-setup" id="sync-setup" style="display:none">
+  <div class="sync-setup-inner">
+    <div style="font-size:13px;font-weight:500;margin-bottom:8px">🔑 云同步设置</div>
+    <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:10px">
+      输入 GitHub Token 开启自动云同步。<br>
+      数据存储在仓库 <b>data.json</b> 中，Mac 和手机自动互通。<br>
+      <a href="https://github.com/settings/tokens" target="_blank" style="color:#378ADD">获取 Token →</a>（勾选 repo 权限即可）
+    </div>
+    <input type="password" id="sync-token-input" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:12px;font-family:monospace;margin-bottom:8px">
+    <div style="display:flex;gap:6px;justify-content:flex-end">
+      <button onclick="document.getElementById('sync-setup').style.display='none'" class="sync-btn">取消</button>
+      <button onclick="saveSyncToken()" class="sync-btn primary">💾 保存并同步</button>
+    </div>
+  </div>
 </div>
 
 <div class="stat-row">
@@ -774,6 +799,7 @@ textarea:focus{border-color:#b4b2a9}
       data.push(dayTasks);
     }
     try { localStorage.setItem('wb-' + WEEK_KEY + '-tasks', JSON.stringify(data)); } catch(e){}
+    autoSyncPush();
   }
 
   function loadTasks(){
@@ -960,6 +986,7 @@ textarea:focus{border-color:#b4b2a9}
       if (el && el.value) vals['sl' + i] = el.value;
     }
     localStorage.setItem('wb-' + WEEK_KEY + '-sleep', JSON.stringify(vals));
+    autoSyncPush();
   }
 
   function loadSleepData(){
@@ -1019,6 +1046,7 @@ textarea:focus{border-color:#b4b2a9}
     try {
       var exe = { goal: document.getElementById('exe-goal').value, dur: document.getElementById('exe-duration').value, state: state };
       localStorage.setItem('wb-' + WEEK_KEY + '-exe', JSON.stringify(exe));
+      autoSyncPush();
     } catch(e) {}
   }
 
@@ -1337,7 +1365,7 @@ textarea:focus{border-color:#b4b2a9}
     row.innerHTML = html;
     document.getElementById('wx-updated').textContent = '✅ ' + cityName + ' · 已更新';
     // Save city
-    try { localStorage.setItem('wb-wx-city', document.getElementById('wx-city').value); } catch(e) {}
+    try { localStorage.setItem('wb-wx-city', document.getElementById('wx-city').value); autoSyncPush(); } catch(e) {}
   }
 
   // ===== 日记模块 =====
@@ -1366,6 +1394,7 @@ textarea:focus{border-color:#b4b2a9}
       if (raw) all = JSON.parse(raw);
       all['d' + idx] = ta.value;
       localStorage.setItem('wb-' + WEEK_KEY + '-diary', JSON.stringify(all));
+      autoSyncPush();
     } catch(e) {}
   }
 
@@ -1505,7 +1534,7 @@ textarea:focus{border-color:#b4b2a9}
         // Keep current data
         NEWS_DATA = currentData;
       } else {
-        try { localStorage.setItem('wb-news', JSON.stringify(NEWS_DATA.slice(0, 50))); } catch(e) {}
+        try { localStorage.setItem('wb-news', JSON.stringify(NEWS_DATA.slice(0, 50))); autoSyncPush(); } catch(e) {}
       }
 
       var now = new Date();
@@ -1632,7 +1661,11 @@ textarea:focus{border-color:#b4b2a9}
     document.getElementById('podcast-list').innerHTML = html;
   };
 
-  // ===== 数据云同步（导出/导入 JSON） =====
+  // ===== 数据云同步（GitHub API 自动同步） =====
+  var SYNC_REPO = 'Oateels/my-weekly-plan';
+  var SYNC_FILE = 'data.json';
+  var SYNC_DEBOUNCE = 8000; // 8 秒防抖
+
   function getAllData(){
     var data = { _version: 2, _exportedAt: new Date().toISOString(), _weekKey: WEEK_KEY };
     for (var i = 0; i < localStorage.length; i++) {
@@ -1644,38 +1677,158 @@ textarea:focus{border-color:#b4b2a9}
     return data;
   }
 
-  function updateSyncStatus(){
+  function getSyncToken(){
+    return localStorage.getItem('wb-sync-token') || '';
+  }
+
+  function updateSyncStatus(msg, isOK){
     var st = document.getElementById('sync-status');
     var hint = document.getElementById('sync-hint');
-    try {
+    var btnSetup = document.getElementById('sync-btn-setup');
+    var btnPush = document.getElementById('sync-btn-push');
+    var token = getSyncToken();
+
+    if (!token) {
+      st.innerHTML = '☁️ 未设置云同步';
+      st.className = 'sync-status warn';
+      hint.style.display = 'inline-flex';
+      hint.textContent = '🔑 首次使用请设置同步';
+      btnSetup.style.display = 'inline-block';
+      btnPush.style.display = 'none';
+    } else if (msg) {
+      st.innerHTML = msg;
+      st.className = isOK ? 'sync-status' : 'sync-status warn';
+      hint.style.display = isOK ? 'none' : 'inline-flex';
+      btnSetup.style.display = 'inline-block';
+      btnPush.style.display = 'inline-block';
+    } else {
       var last = localStorage.getItem('wb-sync-last');
       if (last) {
         var t = new Date(parseInt(last));
-        var ago = Math.floor((Date.now() - t.getTime()) / 86400000);
-        if (ago === 0) {
-          st.innerHTML = '☁️ 今日已同步';
+        var ago = Math.floor((Date.now() - t.getTime()) / 60000);
+        if (ago < 1) {
+          st.innerHTML = '☁️ 刚刚同步';
           st.className = 'sync-status';
-          hint.style.display = 'none';
-        } else if (ago <= 7) {
-          st.innerHTML = '☁️ ' + ago + '天前同步';
+        } else if (ago < 60) {
+          st.innerHTML = '☁️ ' + ago + '分钟前同步';
           st.className = 'sync-status';
-          hint.style.display = 'none';
         } else {
-          st.innerHTML = '☁️ ' + ago + '天前同步';
-          st.className = 'sync-status warn';
-          hint.style.display = 'inline-flex';
+          var hrs = Math.floor(ago / 60);
+          st.innerHTML = '☁️ ' + hrs + '小时前同步';
+          st.className = 'sync-status';
         }
-      } else {
-        st.innerHTML = '☁️ 未同步';
-        st.className = 'sync-status warn';
-        hint.style.display = 'inline-flex';
+        hint.style.display = 'none';
       }
-    } catch(e) {
-      st.innerHTML = '☁️ 未同步';
-      st.className = 'sync-status warn';
+      btnSetup.style.display = 'inline-block';
+      btnPush.style.display = 'inline-block';
     }
   }
 
+  // 从云端拉取数据
+  function cloudPull(callback){
+    var token = getSyncToken();
+    if (!token) { updateSyncStatus(); if(callback) callback(false); return; }
+
+    updateSyncStatus('<span class="sync-spin">⏳</span> 拉取中...', true);
+
+    fetch('https://api.github.com/repos/' + SYNC_REPO + '/contents/' + SYNC_FILE, {
+      headers: { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github.v3+json' }
+    })
+    .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(file){
+      var content = JSON.parse(atob(file.content));
+      var sha = file.sha;
+      localStorage.setItem('wb-sync-sha', sha);
+
+      if (!content._version) throw new Error('Invalid format');
+
+      // Smart merge: cloud data fills gaps
+      var keys = Object.keys(content).filter(function(k){ return k.indexOf('wb-') === 0; });
+      for (var i = 0; i < keys.length; i++) {
+        var key = keys[i];
+        if (!localStorage.getItem(key)) {
+          var val = content[key];
+          localStorage.setItem(key, typeof val === 'string' ? val : JSON.stringify(val));
+        }
+      }
+
+      try { localStorage.setItem('wb-sync-last', String(Date.now())); } catch(e) {}
+      updateSyncStatus('☁️ 已同步', true);
+      if (callback) callback(true);
+    })
+    .catch(function(e){
+      updateSyncStatus('☁️ 同步失败', false);
+      console.log('Cloud pull error:', e.message);
+      if (callback) callback(false);
+    });
+  }
+
+  // 推送到云端
+  function cloudPush(forceReload){
+    var token = getSyncToken();
+    if (!token) { updateSyncStatus(); return; }
+
+    updateSyncStatus('<span class="sync-spin">⏳</span> 同步中...', true);
+    var btn = document.getElementById('sync-btn-push');
+    if (btn) btn.disabled = true;
+
+    var data = getAllData();
+    // Remove sync metadata from push
+    delete data._exportedAt;
+    data._updatedAt = new Date().toISOString();
+
+    var content = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+    var sha = localStorage.getItem('wb-sync-sha') || '';
+
+    var body = JSON.stringify({ message: '自动同步 ' + data._updatedAt, content: content, sha: sha });
+
+    fetch('https://api.github.com/repos/' + SYNC_REPO + '/contents/' + SYNC_FILE, {
+      method: 'PUT',
+      headers: { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+      body: body
+    })
+    .then(function(r){ if(!r.ok) return r.json().then(function(x){ throw new Error(x.message || 'HTTP ' + r.status); }); return r.json(); })
+    .then(function(result){
+      localStorage.setItem('wb-sync-sha', result.content.sha);
+      try { localStorage.setItem('wb-sync-last', String(Date.now())); } catch(e) {}
+      updateSyncStatus('☁️ 已同步', true);
+      if (btn) btn.disabled = false;
+      if (forceReload) location.reload();
+    })
+    .catch(function(e){
+      updateSyncStatus('☁️ 同步失败: ' + e.message.substring(0,20), false);
+      if (btn) btn.disabled = false;
+      console.log('Cloud push error:', e.message);
+    });
+  }
+
+  // 防抖自动推送
+  var _syncTimer = null;
+  function autoSyncPush(){
+    if (!getSyncToken()) return;
+    if (_syncTimer) clearTimeout(_syncTimer);
+    _syncTimer = setTimeout(function(){ cloudPush(); }, SYNC_DEBOUNCE);
+  }
+
+  // 设置面板
+  window.showSyncSetup = function(){
+    var panel = document.getElementById('sync-setup');
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    var input = document.getElementById('sync-token-input');
+    if (input) input.value = getSyncToken();
+  };
+
+  window.saveSyncToken = function(){
+    var token = document.getElementById('sync-token-input').value.trim();
+    if (!token) { alert('请输入 GitHub Token'); return; }
+    if (token.indexOf('ghp_') !== 0) { alert('Token 格式不正确，应以 ghp_ 开头'); return; }
+    localStorage.setItem('wb-sync-token', token);
+    document.getElementById('sync-setup').style.display = 'none';
+    updateSyncStatus();
+    cloudPull(function(ok){ if (ok) location.reload(); });
+  };
+
+  // 导出/导入（保留）
   window.exportAllData = function(){
     var data = getAllData();
     var json = JSON.stringify(data, null, 2);
@@ -1690,9 +1843,6 @@ textarea:focus{border-color:#b4b2a9}
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-
-    try { localStorage.setItem('wb-sync-last', String(Date.now())); } catch(e) {}
-    updateSyncStatus();
   };
 
   window.importData = function(){
@@ -1706,28 +1856,16 @@ textarea:focus{border-color:#b4b2a9}
       reader.onload = function(ev){
         try {
           var imported = JSON.parse(ev.target.result);
-          if (!imported._version) {
-            alert('⚠️ 文件格式不正确，请选择周计划导出的 JSON 备份文件。');
-            return;
-          }
+          if (!imported._version) { alert('⚠️ 文件格式不正确'); return; }
           var now = Date.now();
-          var msg = '即将导入数据：\n\n';
-          msg += '📅 备份日期：' + (imported._exportedAt || '未知') + '\n';
-          msg += '📋 备份周：' + (imported._weekKey || '未知') + '\n';
-          msg += '📦 数据项：' + Object.keys(imported).filter(function(k){ return k.indexOf('wb-') === 0; }).length + ' 条\n\n';
-          msg += '⚠️ 导入策略：智能合并（本地数据优先，导入数据补全空缺）\n';
-          msg += '确认导入？';
-
+          var msg = '即将导入数据：\n\n📅 备份日期：' + (imported._exportedAt || '未知') + '\n📋 备份周：' + (imported._weekKey || '未知') + '\n📦 数据项：' + Object.keys(imported).filter(function(k){ return k.indexOf('wb-') === 0; }).length + ' 条\n\n⚠️ 导入策略：智能合并\n确认导入？';
           if (!confirm(msg)) return;
-
           var keys = Object.keys(imported).filter(function(k){ return k.indexOf('wb-') === 0; });
           for (var i = 0; i < keys.length; i++) {
             var key = keys[i];
+            if (key === 'wb-sync-last' || key === 'wb-sync-sha' || key === 'wb-sync-token') continue;
             var existing = localStorage.getItem(key);
             var importedVal = imported[key];
-            
-            if (key === 'wb-sync-last') continue;
-
             if (!existing) {
               localStorage.setItem(key, typeof importedVal === 'string' ? importedVal : JSON.stringify(importedVal));
             } else {
@@ -1735,33 +1873,34 @@ textarea:focus{border-color:#b4b2a9}
                 var localParsed = JSON.parse(existing);
                 if (typeof importedVal === 'object' && importedVal !== null && !Array.isArray(importedVal)) {
                   var merged = JSON.parse(JSON.stringify(importedVal));
-                  for (var prop in localParsed) {
-                    if (localParsed.hasOwnProperty(prop)) { merged[prop] = localParsed[prop]; }
-                  }
+                  for (var prop in localParsed) { if (localParsed.hasOwnProperty(prop)) merged[prop] = localParsed[prop]; }
                   localStorage.setItem(key, JSON.stringify(merged));
                 } else if (Array.isArray(importedVal) && Array.isArray(localParsed)) {
-                  var toUse = localParsed.length >= importedVal.length ? localParsed : importedVal;
-                  localStorage.setItem(key, JSON.stringify(toUse));
+                  localStorage.setItem(key, JSON.stringify(localParsed.length >= importedVal.length ? localParsed : importedVal));
                 }
               } catch(e2) {}
             }
           }
-
           try { localStorage.setItem('wb-sync-last', String(now)); } catch(e) {}
-
-          alert('✅ 数据导入成功！页面将刷新以应用更改。');
+          alert('✅ 数据导入成功！页面将刷新。');
           location.reload();
-        } catch(e) {
-          alert('❌ 导入失败：文件格式错误。\n' + e.message);
-        }
+        } catch(e) { alert('❌ 导入失败：' + e.message); }
       };
       reader.readAsText(file);
     };
     input.click();
   };
 
-  // Auto-check sync status on load
+  // Auto-check sync status and pull on load
   updateSyncStatus();
+  if (getSyncToken()) {
+    cloudPull(function(ok){
+      if (ok) {
+        // Reload page to apply merged data from cloud
+        setTimeout(function(){ location.reload(); }, 500);
+      }
+    });
+  }
 
   // ===== 今日塔罗模块 =====
   var TAROT_DECK = [
