@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>清除缓存</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #1a1a2e; color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100vh; text-align: center;
+}
+.card {
+  background: #16213e; border-radius: 16px; padding: 40px 30px;
+  max-width: 400px; width: 90%;
+}
+h1 { font-size: 24px; margin-bottom: 20px; color: #7F77DD; }
+.status { font-size: 14px; color: #aaa; margin: 12px 0; min-height: 20px; }
+.status.done { color: #1D9E75; }
+.status.error { color: #E24B4A; }
+.btn {
+  display: inline-block; margin: 10px 6px; padding: 12px 28px;
+  border-radius: 8px; border: none; font-size: 15px; cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-primary { background: #7F77DD; color: #fff; }
+.btn-primary:hover { background: #6B63CC; }
+.btn-green { background: #1D9E75; color: #fff; }
+.btn-green:hover { background: #178560; }
+.log { font-size: 11px; color: #666; margin-top: 20px; text-align: left; font-family: monospace; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>🧹 清除 Service Worker</h1>
+  <div id="status" class="status">检测中…</div>
+  <div id="actions"></div>
+  <pre id="log" class="log"></pre>
+</div>
+
+<script>
+var elStatus = document.getElementById('status');
+var elActions = document.getElementById('actions');
+var elLog = document.getElementById('log');
+
+function log(msg) {
+  elLog.textContent += msg + '\n';
+}
+
+function setStatus(msg, cls) {
+  elStatus.textContent = msg;
+  elStatus.className = 'status ' + (cls || '');
+}
+
+// Step 1: Unregister all service workers
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(function(registrations) {
+    log('发现 ' + registrations.length + ' 个 SW');
+    if (registrations.length === 0) {
+      setStatus('✅ 没有 Service Worker', 'done');
+      showContinue();
+      return;
+    }
+    var promises = registrations.map(function(reg) {
+      log('  卸载: ' + reg.scope);
+      return reg.unregister();
+    });
+    return Promise.all(promises).then(function() {
+      setStatus('✅ Service Worker 已卸载', 'done');
+      // Step 2: Clear all caches
+      if ('caches' in window) {
+        return caches.keys().then(function(keys) {
+          log('发现 ' + keys.length + ' 个缓存');
+          return Promise.all(keys.map(function(key) {
+            log('  删除: ' + key);
+            return caches.delete(key);
+          }));
+        });
+      }
+    });
+  }).then(function() {
+    setStatus('✅ 缓存已清除', 'done');
+    showContinue();
+  }).catch(function(err) {
+    setStatus('❌ 出错: ' + err.message, 'error');
+    log('ERROR: ' + err);
+    showContinue();
+  });
+} else {
+  setStatus('ℹ 浏览器不支持 SW', 'done');
+  showContinue();
+}
+
+function showContinue() {
+  elActions.innerHTML = '<a href="./" class="btn btn-green" style="text-decoration:none">🔙 返回周计划</a>';
+}
+</script>
+</body>
+</html>
