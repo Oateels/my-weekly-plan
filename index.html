@@ -918,7 +918,7 @@ textarea:focus{border-color:#b4b2a9}
     for (var i = 0; i < tasks.length; i++) { setupTask(tasks[i]); }
     updateStats();
     loadSleepData();
-    loadExeData();
+    setTimeout(loadExeData, 0);  // 异步执行，确保 DOM 已解析
     loadMtgs();
     loadGoals();
     loadInspo();
