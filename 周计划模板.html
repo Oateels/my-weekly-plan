@@ -114,7 +114,17 @@ textarea:focus{border-color:#b4b2a9}
 .mtg-row:last-child{border-bottom:none}
 .mtg-time{font-size:12px;color:var(--color-text-secondary);width:85px;flex-shrink:0}
 .mtg-name{font-size:13px;flex:1}
-.mtg-tag{font-size:10px;padding:2px 7px;border-radius:3px;font-weight:500}
+.mtg-tag{font-size:10px;padding:2px 7px;border-radius:3px;font-weight:500;cursor:pointer;user-select:none;transition:opacity .15s}
+.mtg-tag:hover{opacity:.75}
+.mtg-tag-picker{position:fixed;background:#fff;border:1px solid #e0e0da;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.12);padding:6px;z-index:9999;min-width:130px;display:none}
+.mtg-tag-picker.open{display:block}
+.mtg-tag-opt{display:flex;align-items:center;gap:7px;padding:5px 9px;border-radius:6px;cursor:pointer;font-size:12px;white-space:nowrap}
+.mtg-tag-opt:hover{background:#f5f4f0}
+.mtg-tag-opt span{font-size:10px;padding:2px 7px;border-radius:3px;font-weight:500}
+.mtg-tag-custom{display:flex;align-items:center;gap:5px;padding:4px 6px;border-top:1px solid #eee;margin-top:4px}
+.mtg-tag-custom input{flex:1;border:1px solid #ddd;border-radius:5px;padding:3px 7px;font-size:11px;outline:none;min-width:0}
+.mtg-tag-custom input:focus{border-color:#7F77DD}
+.mtg-tag-custom button{font-size:11px;padding:3px 8px;border:none;background:#7F77DD;color:#fff;border-radius:5px;cursor:pointer;white-space:nowrap}
 .tab-row{display:flex;gap:6px;margin-bottom:12px}
 .tab{font-size:12px;padding:5px 14px;border-radius:7px;border:1px solid #ddd;cursor:pointer;background:#fff;color:var(--color-text-secondary);transition:all .15s}
 .tab:hover{background:#f5f5f2}
@@ -651,9 +661,9 @@ textarea:focus{border-color:#b4b2a9}
   <div class="card">
     <div class="sec-label">本周会议 &amp; 重要时间节点</div>
     <div id="mtg-list">
-      <div class="mtg-row"><span class="mtg-time" contenteditable="true">周一 10:00</span><span class="mtg-name" contenteditable="true">项目启动会</span><span class="mtg-tag" style="background:#E6F1FB;color:#185FA5">主业</span><button class="mtg-del" onclick="deleteMtg(this)">&times;</button></div>
-      <div class="mtg-row"><span class="mtg-time" contenteditable="true">周三 15:00</span><span class="mtg-name" contenteditable="true">塔罗沙龙洽谈</span><span class="mtg-tag" style="background:#EEEDFE;color:#534AB7">副业</span><button class="mtg-del" onclick="deleteMtg(this)">&times;</button></div>
-      <div class="mtg-row"><span class="mtg-time" contenteditable="true">周五 11:00</span><span class="mtg-name" contenteditable="true">创意方案提案</span><span class="mtg-tag" style="background:#E6F1FB;color:#185FA5">主业</span><button class="mtg-del" onclick="deleteMtg(this)">&times;</button></div>
+      <div class="mtg-row"><span class="mtg-time" contenteditable="true">周一 10:00</span><span class="mtg-name" contenteditable="true">项目启动会</span><span class="mtg-tag" style="background:#E6F1FB;color:#185FA5" onclick="openMtgTagPicker(this)">主业</span><button class="mtg-del" onclick="deleteMtg(this)">&times;</button></div>
+      <div class="mtg-row"><span class="mtg-time" contenteditable="true">周三 15:00</span><span class="mtg-name" contenteditable="true">塔罗沙龙洽谈</span><span class="mtg-tag" style="background:#EEEDFE;color:#534AB7" onclick="openMtgTagPicker(this)">副业</span><button class="mtg-del" onclick="deleteMtg(this)">&times;</button></div>
+      <div class="mtg-row"><span class="mtg-time" contenteditable="true">周五 11:00</span><span class="mtg-name" contenteditable="true">创意方案提案</span><span class="mtg-tag" style="background:#E6F1FB;color:#185FA5" onclick="openMtgTagPicker(this)">主业</span><button class="mtg-del" onclick="deleteMtg(this)">&times;</button></div>
     </div>
     <button class="add-btn" style="margin-top:10px;font-size:12px" onclick="addMtg()">+ 添加会议</button>
   </div>
@@ -1402,7 +1412,7 @@ textarea:focus{border-color:#b4b2a9}
     var list = document.getElementById('mtg-list');
     var row = document.createElement('div');
     row.className = 'mtg-row';
-    row.innerHTML = '<span class="mtg-time" contenteditable="true">日期 时间</span><span class="mtg-name" contenteditable="true">会议/事项名称</span><span class="mtg-tag" style="background:#F1EFE8;color:#5F5E5A">其他</span><button class="mtg-del" onclick="deleteMtg(this)">&times;</button>';
+    row.innerHTML = '<span class="mtg-time" contenteditable="true">日期 时间</span><span class="mtg-name" contenteditable="true">会议/事项名称</span><span class="mtg-tag" style="background:#F1EFE8;color:#5F5E5A" onclick="openMtgTagPicker(this)">其他</span><button class="mtg-del" onclick="deleteMtg(this)">&times;</button>';
     list.appendChild(row);
     row.querySelector('.mtg-name').focus();
     saveMtgs();
@@ -1524,7 +1534,7 @@ textarea:focus{border-color:#b4b2a9}
         row.className = 'mtg-row';
         row.innerHTML = '<span class="mtg-time" contenteditable="true">' + escapeHtml(m.time || '') + '</span>' +
           '<span class="mtg-name" contenteditable="true">' + escapeHtml(m.name || '') + '</span>' +
-          '<span class="mtg-tag" style="background:' + (m.bg || '#F1EFE8') + ';color:' + (m.color || '#5F5E5A') + '">' + escapeHtml(m.tag || '其他') + '</span>' +
+          '<span class="mtg-tag" style="background:' + (m.bg || '#F1EFE8') + ';color:' + (m.color || '#5F5E5A') + '" onclick="openMtgTagPicker(this)">' + escapeHtml(m.tag || '其他') + '</span>' +
           '<button class="mtg-del" onclick="deleteMtg(this)">&times;</button>';
         list.appendChild(row);
         var editable = row.querySelectorAll('[contenteditable]');
@@ -2618,10 +2628,82 @@ textarea:focus{border-color:#b4b2a9}
 </script>
 
 <!-- 静态调试标记：如果刷新后能看到这个，说明 HTML 已加载最新版 -->
-<div id="v19-debug" style="position:fixed;bottom:4px;right:4px;font-size:11px;color:#fff;background:#1D9E75;padding:3px 8px;border-radius:4px;z-index:99999;pointer-events:none;font-family:monospace">v19</div>
+<div id="v20-debug" style="position:fixed;bottom:4px;right:4px;font-size:11px;color:#fff;background:#1D9E75;padding:3px 8px;border-radius:4px;z-index:99999;pointer-events:none;font-family:monospace">v20</div>
+
+<!-- ===== 会议标签选择浮层 ===== -->
+<div id="mtg-tag-picker" class="mtg-tag-picker">
+  <div class="mtg-tag-opt" data-bg="#E6F1FB" data-color="#185FA5" onclick="pickMtgTag(this)"><span style="background:#E6F1FB;color:#185FA5">主业</span>广告策划</div>
+  <div class="mtg-tag-opt" data-bg="#EEEDFE" data-color="#534AB7" onclick="pickMtgTag(this)"><span style="background:#EEEDFE;color:#534AB7">副业</span>塔罗师</div>
+  <div class="mtg-tag-opt" data-bg="#FEF3E2" data-color="#9A5A00" onclick="pickMtgTag(this)"><span style="background:#FEF3E2;color:#9A5A00">自媒体</span>三平台</div>
+  <div class="mtg-tag-opt" data-bg="#E6F8F3" data-color="#0F6E56" onclick="pickMtgTag(this)"><span style="background:#E6F8F3;color:#0F6E56">学习</span>神秘学</div>
+  <div class="mtg-tag-opt" data-bg="#E8F5E9" data-color="#2E7D32" onclick="pickMtgTag(this)"><span style="background:#E8F5E9;color:#2E7D32">英语</span>英语学习</div>
+  <div class="mtg-tag-opt" data-bg="#F1EFE8" data-color="#5F5E5A" onclick="pickMtgTag(this)"><span style="background:#F1EFE8;color:#5F5E5A">其他</span>其他事项</div>
+  <div class="mtg-tag-custom">
+    <input id="mtg-tag-custom-input" type="text" placeholder="自定义标签…" maxlength="8">
+    <button onclick="confirmCustomTag()">确定</button>
+  </div>
+</div>
 
 <script>
-// ===== v19：数据持久化 —— 最简方案，放在页面最后 =====
+// ===== 会议标签选择器 =====
+(function(){
+  var picker = document.getElementById('mtg-tag-picker');
+  var _activeMtgTag = null;
+
+  window.openMtgTagPicker = function(tagEl) {
+    _activeMtgTag = tagEl;
+    var rect = tagEl.getBoundingClientRect();
+    picker.style.top  = (rect.bottom + 6) + 'px';
+    picker.style.left = rect.left + 'px';
+    picker.style.display = 'block';
+    var pw = picker.offsetWidth;
+    if (rect.left + pw > window.innerWidth - 8) {
+      picker.style.left = (window.innerWidth - pw - 8) + 'px';
+    }
+    picker.classList.add('open');
+    document.getElementById('mtg-tag-custom-input').value = '';
+  };
+
+  window.pickMtgTag = function(optEl) {
+    if (!_activeMtgTag) return;
+    var span = optEl.querySelector('span');
+    _activeMtgTag.textContent = span.textContent;
+    _activeMtgTag.style.background = optEl.dataset.bg;
+    _activeMtgTag.style.color = optEl.dataset.color;
+    closePicker();
+    saveMtgs();
+  };
+
+  window.confirmCustomTag = function() {
+    var val = document.getElementById('mtg-tag-custom-input').value.trim();
+    if (!val || !_activeMtgTag) return;
+    _activeMtgTag.textContent = val;
+    _activeMtgTag.style.background = '#F1EFE8';
+    _activeMtgTag.style.color = '#5F5E5A';
+    closePicker();
+    saveMtgs();
+  };
+
+  document.getElementById('mtg-tag-custom-input').addEventListener('keydown', function(e){
+    if (e.key === 'Enter') confirmCustomTag();
+  });
+
+  function closePicker() {
+    picker.classList.remove('open');
+    picker.style.display = 'none';
+    _activeMtgTag = null;
+  }
+
+  document.addEventListener('click', function(e){
+    if (!picker.contains(e.target) && !e.target.classList.contains('mtg-tag')) {
+      closePicker();
+    }
+  }, true);
+})();
+</script>
+
+<script>
+// ===== v20：数据持久化 —— 最简方案，放在页面最后 =====
 (function() {
   // —— 周 key 计算 ——
   var d = new Date();
@@ -2660,8 +2742,8 @@ textarea:focus{border-color:#b4b2a9}
   }
 
   // —— 更新调试标记为带时间戳 ——
-  var dbg = document.getElementById('v19-debug');
-  if (dbg) dbg.textContent = 'v19 ' + ts();
+  var dbg = document.getElementById('v20-debug');
+  if (dbg) dbg.textContent = 'v20 ' + ts();
 
   // —— 事件委托：input ——
   document.addEventListener('input', function(e) {
@@ -2676,12 +2758,12 @@ textarea:focus{border-color:#b4b2a9}
     if (e.target && e.target.id && F.indexOf(e.target.id) >= 0) svFans();
   });
 
-  console.log('[v19] tarot random draw, wk=' + wk);
+  console.log('[v20] mtg tag picker, wk=' + wk);
 })();
 
 // —— Service Worker（如果存在） ——
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('service-worker.js?v=7')
+  navigator.serviceWorker.register('service-worker.js?v=8')
     .then(function(reg) { console.log('SW registered:', reg.scope); })
     .catch(function(err) { console.log('SW failed:', err); });
 }

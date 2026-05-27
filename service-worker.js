@@ -1,4 +1,4 @@
-var CACHE_NAME = 'weekly-planner-v7';
+var CACHE_NAME = 'weekly-planner-v8';
 var ASSETS = [
   '/my-weekly-plan/',
   '/my-weekly-plan/index.html',
