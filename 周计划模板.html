@@ -1394,9 +1394,9 @@ textarea:focus{border-color:#b4b2a9}
       var doneClass = s.done ? ' done' : '';
       row.innerHTML = '<span class="exe-seq">第' + (i + 1) + '次</span>' +
         '<div class="exe-dot' + doneClass + '" onclick="toggleExeSession(this)"></div>' +
-        '<input type="number" class="exe-dur-input" value="' + durVal + '" min="5" max="300" onchange="saveExeData()" onfocus="this.select()">' +
+        '<input type="number" class="exe-dur-input" value="' + durVal + '" min="5" max="300" oninput="saveExeData()" onchange="saveExeData()" onfocus="this.select()">' +
         '<span style="font-size:11px;color:var(--color-text-secondary);flex-shrink:0">分钟</span>' +
-        '<input type="text" class="exe-note-input" value="' + escapeHtml(s.note || '') + '" placeholder="练了什么？感受如何？" onchange="saveExeData()">' +
+        '<input type="text" class="exe-note-input" value="' + escapeHtml(s.note || '') + '" placeholder="练了什么？感受如何？" oninput="saveExeData()" onchange="saveExeData()">' +
         '<button class="exe-del" onclick="deleteExeSession(this)">&times;</button>';
       container.appendChild(row);
     }
@@ -1450,9 +1450,9 @@ textarea:focus{border-color:#b4b2a9}
     row.setAttribute('data-idx', idx - 1);
     row.innerHTML = '<span class="exe-seq">第' + idx + '次</span>' +
       '<div class="exe-dot" onclick="toggleExeSession(this)"></div>' +
-      '<input type="number" class="exe-dur-input" value="30" min="5" max="300" onchange="saveExeData()" onfocus="this.select()">' +
+      '<input type="number" class="exe-dur-input" value="30" min="5" max="300" oninput="saveExeData()" onchange="saveExeData()" onfocus="this.select()">' +
       '<span style="font-size:11px;color:var(--color-text-secondary);flex-shrink:0">分钟</span>' +
-      '<input type="text" class="exe-note-input" placeholder="练了什么？感受如何？" onchange="saveExeData()">' +
+      '<input type="text" class="exe-note-input" placeholder="练了什么？感受如何？" oninput="saveExeData()" onchange="saveExeData()">' +
       '<button class="exe-del" onclick="deleteExeSession(this)">&times;</button>';
     container.appendChild(row);
     saveExeData();
