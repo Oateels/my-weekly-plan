@@ -1355,6 +1355,8 @@ textarea:focus{border-color:#b4b2a9}
     var exeContainer = document.getElementById('exe-sessions');
     if (!exeContainer) return;
     var rows = exeContainer.querySelectorAll('.exe-session');
+    // 守卫：DOM 未渲染时不保存，防止覆盖掉已有数据
+    if (rows.length === 0) return;
     var sessions = [];
     for (var i = 0; i < rows.length; i++) {
       var row = rows[i];
@@ -1370,7 +1372,6 @@ textarea:focus{border-color:#b4b2a9}
     var goal = document.getElementById('exe-goal').value || '3';
     var wk = getExeWeekKey();
     localStorage.setItem('wb-' + wk + '-exe', JSON.stringify({goal: goal, sessions: sessions}));
-    console.log('[SAVE] exe saved, wk=' + wk + ', key=wb-' + wk + '-exe', {goal: goal, sessions: sessions});
     updateExeStats();
     autoSyncPush();
   }
@@ -1462,18 +1463,19 @@ textarea:focus{border-color:#b4b2a9}
   };
 
   function loadExeData(){
-    console.log('[LOAD] loadExeData called, WEEK_KEY=', WEEK_KEY, 'exeWk=', getExeWeekKey());
     var container = document.getElementById('exe-sessions');
     if (!container) {
-      console.warn('[LOAD] exe-sessions not found, retrying in 100ms');
       setTimeout(loadExeData, 100);
       return;
     }
     var d = getExeData();
-    console.log('[LOAD] getExeData returned:', d);
     renderExeSessions(d);
-    var dbg = document.getElementById('exe-load-debug');
-    if (dbg) dbg.textContent = 'load:' + (d.sessions ? d.sessions.length : 0) + ' sessions, wk=' + getExeWeekKey();
+    // 事件委托：统一在容器上监听 input / change，确保动态生成的行也能触发保存
+    if (!container._exeListenerBound) {
+      container._exeListenerBound = true;
+      container.addEventListener('input', function(){ saveExeData(); });
+      container.addEventListener('change', function(){ saveExeData(); });
+    }
   }
 
 
