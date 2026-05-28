@@ -944,11 +944,55 @@ textarea:focus{border-color:#b4b2a9}
   // ===== FANS_IDS 必须定义在 init 块之前，否则 loadFans() 调用时它还是 undefined =====
   var FANS_IDS = window.FANS_IDS = ['dy-last','dy-cur','xhs-last','xhs-cur','xhs-orders','sph-last','sph-cur'];
 
+  function getVideoKey(){
+    return 'wb-' + WEEK_KEY + '-videos';
+  }
+
+  function readVideoState(){
+    var slots = document.querySelectorAll('#vt .vt-slot');
+    var state = [];
+    for (var i = 0; i < slots.length; i++) {
+      state.push(slots[i].classList.contains('filled'));
+    }
+    return state;
+  }
+
+  function applyVideoState(state){
+    var slots = document.querySelectorAll('#vt .vt-slot');
+    for (var i = 0; i < slots.length; i++) {
+      var filled = !!(state && state[i]);
+      slots[i].classList.toggle('filled', filled);
+      var lbl = slots[i].querySelector('.vt-lbl');
+      if (lbl) lbl.textContent = filled ? '已发布' : '待发布';
+    }
+  }
+
+  function saveVideoState(){
+    try {
+      localStorage.setItem(getVideoKey(), JSON.stringify(readVideoState()));
+      autoSyncPush();
+    } catch(e) {
+      console.error('[SAVE] videos FAILED', e);
+    }
+  }
+
+  function loadVideoState(){
+    try {
+      var raw = localStorage.getItem(getVideoKey());
+      if (!raw) return;
+      var state = JSON.parse(raw);
+      applyVideoState(Array.isArray(state) ? state : []);
+    } catch(e) {
+      console.error('[LOAD] videos FAILED', e);
+    }
+  }
+
   // Init all existing tasks on load
   (function(){
     var restored = loadTasks();
     var tasks = document.querySelectorAll('#day-grid .task');
     for (var i = 0; i < tasks.length; i++) { setupTask(tasks[i]); }
+    loadVideoState();
     updateStats();
     loadSleepData();
     setTimeout(loadExeData, 0);  // 异步执行，确保 DOM 已解析
@@ -961,9 +1005,11 @@ textarea:focus{border-color:#b4b2a9}
 
   window.toggleVideo = function(idx){
     var slot = document.getElementById('v' + idx);
+    if (!slot) return;
     slot.classList.toggle('filled');
     var lbl = slot.querySelector('.vt-lbl');
-    lbl.textContent = slot.classList.contains('filled') ? '已发布' : '待发布';
+    if (lbl) lbl.textContent = slot.classList.contains('filled') ? '已发布' : '待发布';
+    saveVideoState();
     updateStats();
   };
 
