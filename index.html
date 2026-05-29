@@ -1717,20 +1717,24 @@ textarea:focus{border-color:#b4b2a9}
     return '羽绒服+保暖';
   }
 
+  // WMO weather codes → emoji: https://www.nodc.noaa.gov/archive/arc0021/0002199/1.1/data/0-data/HTML/WMO-CODE/WMO4677.HTM
   function getWeatherEmoji(code){
-    if (code <= 0) return '☀️';
-    if (code <= 3) return '⛅';
-    if (code <= 19) return '🌫️';
-    if (code <= 29) return '🌧️';
-    if (code <= 39) return '🌨️';
-    if (code <= 49) return '🌫️';
-    if (code <= 59) return '🌦️';
-    if (code <= 69) return '🌧️';
-    if (code <= 79) return '❄️';
-    if (code <= 82) return '🌧️';
-    if (code <= 86) return '🌨️';
-    if (code <= 99) return '⛈️';
-    return '🌤️';
+    if (code === 0) return '☀️';            // Clear sky
+    if (code === 1) return '🌤️';           // Mainly clear
+    if (code === 2) return '⛅';            // Partly cloudy
+    if (code === 3) return '☁️';            // Overcast
+    if (code === 45 || code === 48) return '🌫️'; // Fog / depositing rime fog
+    if (code === 51 || code === 53 || code === 55) return '🌦️'; // Drizzle: light/moderate/dense
+    if (code === 56 || code === 57) return '🌧️'; // Freezing drizzle
+    if (code === 61 || code === 63 || code === 65) return '🌧️'; // Rain: slight/moderate/heavy
+    if (code === 66 || code === 67) return '🌧️'; // Freezing rain
+    if (code === 71 || code === 73 || code === 75) return '🌨️'; // Snow: slight/moderate/heavy
+    if (code === 77) return '❄️';           // Snow grains
+    if (code === 80 || code === 81 || code === 82) return '🌧️'; // Rain showers
+    if (code === 85 || code === 86) return '🌨️'; // Snow showers
+    if (code === 95) return '⛈️';           // Thunderstorm
+    if (code === 96 || code === 99) return '⛈️'; // Thunderstorm with hail
+    return '🌤️';                            // Fallback
   }
 
   function getPrecautions(code, maxTemp, windSpeed, precipProb){
@@ -1830,20 +1834,44 @@ textarea:focus{border-color:#b4b2a9}
     }
   };
 
-  // wttr.in 格式转换（3天数据兜底）
+  // wttr.in 格式转换（fallback 兜底）
   function renderWeatherFromWttr(wttr, cityName){
     var row = document.getElementById('weather-row');
     try {
-      var daysCN = ['日','一','二','三','四','五','六'];
-      var html = '';
-      var weatherDays = wttr.weather;
+      var daysCN = ['一','二','三','四','五','六','日'];
       var now = new Date();
+      var dayOfWeek = now.getDay() || 7; // 1=Mon ... 7=Sun
+      var todayOffset = dayOfWeek - 1; // 0=Mon ... 6=Sun
       var mon = new Date(now);
-      var dow = now.getDay() || 7;
-      mon.setDate(now.getDate() - dow + 1);
+      mon.setDate(now.getDate() - dayOfWeek + 1);
+      var weatherDays = wttr.weather;
 
+      var html = '';
       for (var i = 0; i < 7; i++) {
-        var wd = weatherDays[i] || weatherDays[weatherDays.length - 1];
+        // Forecast index: day i relative to Monday → forecast array offset
+        var forecastIdx = i - todayOffset;
+
+        var d = new Date(mon);
+        d.setDate(mon.getDate() + i);
+        var virgo = getVirgoGuidance(d);
+
+        // Past day: no forecast data
+        if (forecastIdx < 0) {
+          html += '<div class="wx-card" style="opacity:0.55">' +
+            '<div class="wx-day">周' + daysCN[i] + ' ' + (d.getMonth()+1) + '/' + d.getDate() + '</div>' +
+            '<div class="wx-icon">📅</div>' +
+            '<div class="wx-temp" style="font-size:12px;color:#999">—</div>' +
+            '<div class="wx-temp-lo" style="font-size:12px;color:#999">已过</div>' +
+            '<div class="wx-divider"></div>' +
+            '<div class="wx-virgo-header">今日指引</div>' +
+            '<div class="wx-virgo-do">✨ ' + virgo.activity + '</div>' +
+            '<div class="wx-virgo-color">🎨 <span class="wx-color-dot" style="background:' + virgo.colorHex + '"></span> ' + virgo.colorName + '</div>' +
+            '</div>';
+          continue;
+        }
+
+        // Use forecast data, fall back to last available day if index out of range
+        var wd = (forecastIdx < weatherDays.length) ? weatherDays[forecastIdx] : weatherDays[weatherDays.length - 1];
         var maxT = wd.maxtempC || 0;
         var minT = wd.mintempC || 0;
         var desc = (wd.hourly && wd.hourly[0] && wd.hourly[0].weatherDesc && wd.hourly[0].weatherDesc[0]) ? wd.hourly[0].weatherDesc[0].value : '晴';
@@ -1852,12 +1880,8 @@ textarea:focus{border-color:#b4b2a9}
         var clothes = getClothingGuide(maxT);
         var tips = getPrecautions(code, maxT, 10, 20);
 
-        var d = new Date(mon);
-        d.setDate(mon.getDate() + i);
-        var virgo = getVirgoGuidance(d);
-
         html += '<div class="wx-card">' +
-          '<div class="wx-day">周' + daysCN[(i+1)%7] + ' ' + (d.getMonth()+1) + '/' + d.getDate() + '</div>' +
+          '<div class="wx-day">周' + daysCN[i] + ' ' + (d.getMonth()+1) + '/' + d.getDate() + '</div>' +
           '<div class="wx-icon">' + emoji + '</div>' +
           '<div class="wx-temp">' + maxT + '°</div>' +
           '<div class="wx-temp-lo">' + minT + '°</div>' +
@@ -1894,25 +1918,55 @@ textarea:focus{border-color:#b4b2a9}
     var daysCN = ['一','二','三','四','五','六','日'];
     var now = new Date();
     // Find this week's Monday
-    var dayOfWeek = now.getDay() || 7;
+    var dayOfWeek = now.getDay() || 7; // 1=Mon ... 7=Sun
+    var todayOffset = dayOfWeek - 1; // 0=Mon ... 6=Sun: how many days from Monday to today
     var mon = new Date(now);
     mon.setDate(now.getDate() - dayOfWeek + 1);
 
     var html = '';
     for (var i = 0; i < 7; i++) {
-      var maxT = Math.round(dailies.temperature_2m_max[i]);
-      var minT = Math.round(dailies.temperature_2m_min[i]);
-      var code = dailies.weather_code[i];
-      var precip = dailies.precipitation_probability_max[i] || 0;
-      var wind = dailies.wind_speed_10m_max[i] || 0;
-      var emoji = getWeatherEmoji(code);
-      var clothes = getClothingGuide(maxT);
-      var tips = getPrecautions(code, maxT, wind, precip);
-
-      // Calculate date for Virgo guidance
       var d = new Date(mon);
       d.setDate(mon.getDate() + i);
       var virgo = getVirgoGuidance(d);
+
+      // Forecast index: day i relative to Monday → forecast array offset
+      // API returns 7 days starting from today, so forecastIdx = i - todayOffset
+      var forecastIdx = i - todayOffset;
+
+      // Past day: no forecast data available (before today)
+      if (forecastIdx < 0) {
+        html += '<div class="wx-card" style="opacity:0.55">' +
+          '<div class="wx-day">周' + daysCN[i] + ' ' + (d.getMonth()+1) + '/' + d.getDate() + '</div>' +
+          '<div class="wx-icon">📅</div>' +
+          '<div class="wx-temp" style="font-size:12px;color:#999">—</div>' +
+          '<div class="wx-temp-lo" style="font-size:12px;color:#999">已过</div>' +
+          '<div class="wx-divider"></div>' +
+          '<div class="wx-virgo-header">今日指引</div>' +
+          '<div class="wx-virgo-do">✨ ' + virgo.activity + '</div>' +
+          '<div class="wx-virgo-color">🎨 <span class="wx-color-dot" style="background:' + virgo.colorHex + '"></span> ' + virgo.colorName + '</div>' +
+          '<div class="wx-zodiac" style="font-size:9px;color:#888">' + virgo.colorDesc + '</div>' +
+          '</div>';
+        continue;
+      }
+
+      // Future day beyond forecast range (shouldn't happen with 7-day forecast)
+      if (forecastIdx >= dailies.time.length) {
+        html += '<div class="wx-card" style="opacity:0.55">' +
+          '<div class="wx-day">周' + daysCN[i] + ' ' + (d.getMonth()+1) + '/' + d.getDate() + '</div>' +
+          '<div class="wx-icon">📅</div>' +
+          '<div class="wx-temp" style="font-size:12px;color:#999">—</div>' +
+          '</div>';
+        continue;
+      }
+
+      var maxT = Math.round(dailies.temperature_2m_max[forecastIdx]);
+      var minT = Math.round(dailies.temperature_2m_min[forecastIdx]);
+      var code = dailies.weather_code[forecastIdx];
+      var precip = dailies.precipitation_probability_max[forecastIdx] || 0;
+      var wind = dailies.wind_speed_10m_max[forecastIdx] || 0;
+      var emoji = getWeatherEmoji(code);
+      var clothes = getClothingGuide(maxT);
+      var tips = getPrecautions(code, maxT, wind, precip);
 
       html += '<div class="wx-card">' +
         '<div class="wx-day">周' + daysCN[i] + ' ' + (d.getMonth()+1) + '/' + d.getDate() + '</div>' +
@@ -2729,6 +2783,8 @@ textarea:focus{border-color:#b4b2a9}
     var savedCity = localStorage.getItem('wb-wx-city');
     if (savedCity) {
       document.getElementById('wx-city').value = savedCity;
+      // Auto-fetch weather on load if city is saved
+      setTimeout(function(){ fetchWeather(); }, 500);
     }
     loadAllDiaries();
     loadPodcastRecommendation();
@@ -2739,7 +2795,7 @@ textarea:focus{border-color:#b4b2a9}
 </script>
 
 <!-- 静态调试标记：如果刷新后能看到这个，说明 HTML 已加载最新版 -->
-<div id="v21-debug" style="position:fixed;bottom:4px;right:4px;font-size:11px;color:#fff;background:#1D9E75;padding:3px 8px;border-radius:4px;z-index:99999;pointer-events:none;font-family:monospace">v21</div>
+<div id="v22-debug" style="position:fixed;bottom:4px;right:4px;font-size:11px;color:#fff;background:#1D9E75;padding:3px 8px;border-radius:4px;z-index:99999;pointer-events:none;font-family:monospace">v22</div>
 
 <!-- ===== 会议标签选择浮层 ===== -->
 <div id="mtg-tag-picker" class="mtg-tag-picker">

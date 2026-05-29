@@ -112,6 +112,7 @@ textarea:focus{border-color:#b4b2a9}
 .vt-slot.filled .vt-lbl{color:#1D9E75}
 .mtg-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--color-border-tertiary)}
 .mtg-row:last-child{border-bottom:none}
+/* 三段时间区域 */
 .mtg-time-group{display:flex;align-items:center;gap:3px;flex-shrink:0}
 .mtg-date-input{font-size:11px;color:var(--color-text-secondary);border:none;background:transparent;width:40px;text-align:center;outline:none;padding:1px 2px;border-radius:3px}
 .mtg-date-input:focus{background:rgba(0,0,0,.05)}
@@ -122,10 +123,12 @@ textarea:focus{border-color:#b4b2a9}
 .mtg-name{font-size:13px;flex:1}
 .mtg-tag{font-size:10px;padding:2px 7px;border-radius:3px;font-weight:500;cursor:pointer;user-select:none;transition:opacity .15s}
 .mtg-tag:hover{opacity:.75}
+/* 标签选择浮层 */
 .mtg-tag-picker{position:fixed;background:#fff;border:1px solid #e0e0da;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.12);padding:6px;z-index:9999;min-width:160px;display:none}
 .mtg-tag-picker.open{display:block}
 .mtg-tag-opt{display:flex;align-items:center;gap:7px;padding:5px 9px;border-radius:6px;cursor:pointer;font-size:12px;white-space:nowrap}
 .mtg-tag-opt:hover{background:#f5f4f0}
+/* 可编辑的标签预设名 */
 .mtg-tag-opt-label{font-size:10px;padding:2px 7px;border-radius:3px;font-weight:500;min-width:32px;text-align:center}
 .mtg-tag-opt-label[contenteditable=true]:focus{outline:1px solid #7F77DD;cursor:text}
 .mtg-tag-opt-desc{color:#888;font-size:11px}
@@ -1591,6 +1594,7 @@ textarea:focus{border-color:#b4b2a9}
   }
 
   function loadMtgs(){
+    // 辅助：生成星期 select HTML（selected 高亮对应选项）
     function weekdaySelect(val) {
       var days = ['周一','周二','周三','周四','周五','周六','周日'];
       var opts = '';
@@ -1602,6 +1606,7 @@ textarea:focus{border-color:#b4b2a9}
     try {
       var raw = localStorage.getItem('wb-' + WEEK_KEY + '-mtgs');
       if (!raw) {
+        // Wire up change/blur listeners on hardcoded rows
         var existingInputs = document.querySelectorAll('#mtg-list .mtg-row input, #mtg-list .mtg-row select, #mtg-list .mtg-row [contenteditable]');
         for (var e = 0; e < existingInputs.length; e++) {
           existingInputs[e].addEventListener('blur', saveMtgs);
@@ -1614,6 +1619,7 @@ textarea:focus{border-color:#b4b2a9}
       list.innerHTML = '';
       for (var i = 0; i < data.length; i++) {
         var m = data[i];
+        // 兼容旧数据（time 字段）
         var dateVal    = m.date    || '';
         var weekdayVal = m.weekday || '周一';
         var time3Val   = m.time3   || m.time  || '';
@@ -1711,20 +1717,24 @@ textarea:focus{border-color:#b4b2a9}
     return '羽绒服+保暖';
   }
 
+  // WMO weather codes → emoji: https://www.nodc.noaa.gov/archive/arc0021/0002199/1.1/data/0-data/HTML/WMO-CODE/WMO4677.HTM
   function getWeatherEmoji(code){
-    if (code <= 0) return '☀️';
-    if (code <= 3) return '⛅';
-    if (code <= 19) return '🌫️';
-    if (code <= 29) return '🌧️';
-    if (code <= 39) return '🌨️';
-    if (code <= 49) return '🌫️';
-    if (code <= 59) return '🌦️';
-    if (code <= 69) return '🌧️';
-    if (code <= 79) return '❄️';
-    if (code <= 82) return '🌧️';
-    if (code <= 86) return '🌨️';
-    if (code <= 99) return '⛈️';
-    return '🌤️';
+    if (code === 0) return '☀️';            // Clear sky
+    if (code === 1) return '🌤️';           // Mainly clear
+    if (code === 2) return '⛅';            // Partly cloudy
+    if (code === 3) return '☁️';            // Overcast
+    if (code === 45 || code === 48) return '🌫️'; // Fog / depositing rime fog
+    if (code === 51 || code === 53 || code === 55) return '🌦️'; // Drizzle: light/moderate/dense
+    if (code === 56 || code === 57) return '🌧️'; // Freezing drizzle
+    if (code === 61 || code === 63 || code === 65) return '🌧️'; // Rain: slight/moderate/heavy
+    if (code === 66 || code === 67) return '🌧️'; // Freezing rain
+    if (code === 71 || code === 73 || code === 75) return '🌨️'; // Snow: slight/moderate/heavy
+    if (code === 77) return '❄️';           // Snow grains
+    if (code === 80 || code === 81 || code === 82) return '🌧️'; // Rain showers
+    if (code === 85 || code === 86) return '🌨️'; // Snow showers
+    if (code === 95) return '⛈️';           // Thunderstorm
+    if (code === 96 || code === 99) return '⛈️'; // Thunderstorm with hail
+    return '🌤️';                            // Fallback
   }
 
   function getPrecautions(code, maxTemp, windSpeed, precipProb){
@@ -1824,20 +1834,44 @@ textarea:focus{border-color:#b4b2a9}
     }
   };
 
-  // wttr.in 格式转换（3天数据兜底）
+  // wttr.in 格式转换（fallback 兜底）
   function renderWeatherFromWttr(wttr, cityName){
     var row = document.getElementById('weather-row');
     try {
-      var daysCN = ['日','一','二','三','四','五','六'];
-      var html = '';
-      var weatherDays = wttr.weather;
+      var daysCN = ['一','二','三','四','五','六','日'];
       var now = new Date();
+      var dayOfWeek = now.getDay() || 7; // 1=Mon ... 7=Sun
+      var todayOffset = dayOfWeek - 1; // 0=Mon ... 6=Sun
       var mon = new Date(now);
-      var dow = now.getDay() || 7;
-      mon.setDate(now.getDate() - dow + 1);
+      mon.setDate(now.getDate() - dayOfWeek + 1);
+      var weatherDays = wttr.weather;
 
+      var html = '';
       for (var i = 0; i < 7; i++) {
-        var wd = weatherDays[i] || weatherDays[weatherDays.length - 1];
+        // Forecast index: day i relative to Monday → forecast array offset
+        var forecastIdx = i - todayOffset;
+
+        var d = new Date(mon);
+        d.setDate(mon.getDate() + i);
+        var virgo = getVirgoGuidance(d);
+
+        // Past day: no forecast data
+        if (forecastIdx < 0) {
+          html += '<div class="wx-card" style="opacity:0.55">' +
+            '<div class="wx-day">周' + daysCN[i] + ' ' + (d.getMonth()+1) + '/' + d.getDate() + '</div>' +
+            '<div class="wx-icon">📅</div>' +
+            '<div class="wx-temp" style="font-size:12px;color:#999">—</div>' +
+            '<div class="wx-temp-lo" style="font-size:12px;color:#999">已过</div>' +
+            '<div class="wx-divider"></div>' +
+            '<div class="wx-virgo-header">今日指引</div>' +
+            '<div class="wx-virgo-do">✨ ' + virgo.activity + '</div>' +
+            '<div class="wx-virgo-color">🎨 <span class="wx-color-dot" style="background:' + virgo.colorHex + '"></span> ' + virgo.colorName + '</div>' +
+            '</div>';
+          continue;
+        }
+
+        // Use forecast data, fall back to last available day if index out of range
+        var wd = (forecastIdx < weatherDays.length) ? weatherDays[forecastIdx] : weatherDays[weatherDays.length - 1];
         var maxT = wd.maxtempC || 0;
         var minT = wd.mintempC || 0;
         var desc = (wd.hourly && wd.hourly[0] && wd.hourly[0].weatherDesc && wd.hourly[0].weatherDesc[0]) ? wd.hourly[0].weatherDesc[0].value : '晴';
@@ -1846,12 +1880,8 @@ textarea:focus{border-color:#b4b2a9}
         var clothes = getClothingGuide(maxT);
         var tips = getPrecautions(code, maxT, 10, 20);
 
-        var d = new Date(mon);
-        d.setDate(mon.getDate() + i);
-        var virgo = getVirgoGuidance(d);
-
         html += '<div class="wx-card">' +
-          '<div class="wx-day">周' + daysCN[(i+1)%7] + ' ' + (d.getMonth()+1) + '/' + d.getDate() + '</div>' +
+          '<div class="wx-day">周' + daysCN[i] + ' ' + (d.getMonth()+1) + '/' + d.getDate() + '</div>' +
           '<div class="wx-icon">' + emoji + '</div>' +
           '<div class="wx-temp">' + maxT + '°</div>' +
           '<div class="wx-temp-lo">' + minT + '°</div>' +
@@ -1888,25 +1918,55 @@ textarea:focus{border-color:#b4b2a9}
     var daysCN = ['一','二','三','四','五','六','日'];
     var now = new Date();
     // Find this week's Monday
-    var dayOfWeek = now.getDay() || 7;
+    var dayOfWeek = now.getDay() || 7; // 1=Mon ... 7=Sun
+    var todayOffset = dayOfWeek - 1; // 0=Mon ... 6=Sun: how many days from Monday to today
     var mon = new Date(now);
     mon.setDate(now.getDate() - dayOfWeek + 1);
 
     var html = '';
     for (var i = 0; i < 7; i++) {
-      var maxT = Math.round(dailies.temperature_2m_max[i]);
-      var minT = Math.round(dailies.temperature_2m_min[i]);
-      var code = dailies.weather_code[i];
-      var precip = dailies.precipitation_probability_max[i] || 0;
-      var wind = dailies.wind_speed_10m_max[i] || 0;
-      var emoji = getWeatherEmoji(code);
-      var clothes = getClothingGuide(maxT);
-      var tips = getPrecautions(code, maxT, wind, precip);
-
-      // Calculate date for Virgo guidance
       var d = new Date(mon);
       d.setDate(mon.getDate() + i);
       var virgo = getVirgoGuidance(d);
+
+      // Forecast index: day i relative to Monday → forecast array offset
+      // API returns 7 days starting from today, so forecastIdx = i - todayOffset
+      var forecastIdx = i - todayOffset;
+
+      // Past day: no forecast data available (before today)
+      if (forecastIdx < 0) {
+        html += '<div class="wx-card" style="opacity:0.55">' +
+          '<div class="wx-day">周' + daysCN[i] + ' ' + (d.getMonth()+1) + '/' + d.getDate() + '</div>' +
+          '<div class="wx-icon">📅</div>' +
+          '<div class="wx-temp" style="font-size:12px;color:#999">—</div>' +
+          '<div class="wx-temp-lo" style="font-size:12px;color:#999">已过</div>' +
+          '<div class="wx-divider"></div>' +
+          '<div class="wx-virgo-header">今日指引</div>' +
+          '<div class="wx-virgo-do">✨ ' + virgo.activity + '</div>' +
+          '<div class="wx-virgo-color">🎨 <span class="wx-color-dot" style="background:' + virgo.colorHex + '"></span> ' + virgo.colorName + '</div>' +
+          '<div class="wx-zodiac" style="font-size:9px;color:#888">' + virgo.colorDesc + '</div>' +
+          '</div>';
+        continue;
+      }
+
+      // Future day beyond forecast range (shouldn't happen with 7-day forecast)
+      if (forecastIdx >= dailies.time.length) {
+        html += '<div class="wx-card" style="opacity:0.55">' +
+          '<div class="wx-day">周' + daysCN[i] + ' ' + (d.getMonth()+1) + '/' + d.getDate() + '</div>' +
+          '<div class="wx-icon">📅</div>' +
+          '<div class="wx-temp" style="font-size:12px;color:#999">—</div>' +
+          '</div>';
+        continue;
+      }
+
+      var maxT = Math.round(dailies.temperature_2m_max[forecastIdx]);
+      var minT = Math.round(dailies.temperature_2m_min[forecastIdx]);
+      var code = dailies.weather_code[forecastIdx];
+      var precip = dailies.precipitation_probability_max[forecastIdx] || 0;
+      var wind = dailies.wind_speed_10m_max[forecastIdx] || 0;
+      var emoji = getWeatherEmoji(code);
+      var clothes = getClothingGuide(maxT);
+      var tips = getPrecautions(code, maxT, wind, precip);
 
       html += '<div class="wx-card">' +
         '<div class="wx-day">周' + daysCN[i] + ' ' + (d.getMonth()+1) + '/' + d.getDate() + '</div>' +
@@ -2114,6 +2174,7 @@ textarea:focus{border-color:#b4b2a9}
 
     // ② 后台尝试抓取可访问的 RSS（成功则追加到头部）
     var RSS_SOURCES = [
+      // 使用 allorigins 代理绕过 CORS，只抓国内可访问的 RSS
       { url:'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://www.36kr.com/feed'), topic:'AI', parser:'rss' },
       { url:'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://sspai.com/feed'), topic:'创意', parser:'rss' },
       { url:'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://www.huxiu.com/rss/0.xml'), topic:'经济', parser:'rss' },
@@ -2132,6 +2193,7 @@ textarea:focus{border-color:#b4b2a9}
           .finally(function(){
             done++;
             if (done === RSS_SOURCES.length && fetched.length > 0) {
+              // 去重并插入头部
               var seen = {};
               NEWS_DATA.forEach(function(n){ seen[n.title] = true; });
               var fresh = fetched.filter(function(n){ return !seen[n.title]; });
@@ -2164,6 +2226,7 @@ textarea:focus{border-color:#b4b2a9}
   function parseNewsRSS(xml, topic){
     try {
       var items = [];
+      // 支持 RSS <item> 和 Atom <entry>
       var rssReg = /<item>([\s\S]*?)<\/item>/gi;
       var atomReg = /<entry>([\s\S]*?)<\/entry>/gi;
       var match;
@@ -2720,6 +2783,8 @@ textarea:focus{border-color:#b4b2a9}
     var savedCity = localStorage.getItem('wb-wx-city');
     if (savedCity) {
       document.getElementById('wx-city').value = savedCity;
+      // Auto-fetch weather on load if city is saved
+      setTimeout(function(){ fetchWeather(); }, 500);
     }
     loadAllDiaries();
     loadPodcastRecommendation();
@@ -2730,7 +2795,7 @@ textarea:focus{border-color:#b4b2a9}
 </script>
 
 <!-- 静态调试标记：如果刷新后能看到这个，说明 HTML 已加载最新版 -->
-<div id="v21-debug" style="position:fixed;bottom:4px;right:4px;font-size:11px;color:#fff;background:#1D9E75;padding:3px 8px;border-radius:4px;z-index:99999;pointer-events:none;font-family:monospace">v21</div>
+<div id="v22-debug" style="position:fixed;bottom:4px;right:4px;font-size:11px;color:#fff;background:#1D9E75;padding:3px 8px;border-radius:4px;z-index:99999;pointer-events:none;font-family:monospace">v22</div>
 
 <!-- ===== 会议标签选择浮层 ===== -->
 <div id="mtg-tag-picker" class="mtg-tag-picker">
@@ -2751,13 +2816,16 @@ textarea:focus{border-color:#b4b2a9}
 // ===== 会议标签选择器 =====
 (function(){
   var picker = document.getElementById('mtg-tag-picker');
-  var _activeMtgTag = null;
+  var _activeMtgTag = null; // 当前正在编辑的标签元素
 
+  // 点击标签时打开选择浮层
   window.openMtgTagPicker = function(tagEl) {
     _activeMtgTag = tagEl;
+    // 定位浮层
     var rect = tagEl.getBoundingClientRect();
     picker.style.top  = (rect.bottom + 6) + 'px';
     picker.style.left = rect.left + 'px';
+    // 防止超出屏幕右侧
     picker.style.display = 'block';
     var pw = picker.offsetWidth;
     if (rect.left + pw > window.innerWidth - 8) {
@@ -2767,17 +2835,20 @@ textarea:focus{border-color:#b4b2a9}
     document.getElementById('mtg-tag-custom-input').value = '';
   };
 
+  // 选择预设标签
   window.pickMtgTag = function(optEl) {
+    // 如果用户点的是 label 本身（正在编辑），不触发选择
     if (document.activeElement && document.activeElement.classList.contains('mtg-tag-opt-label')) return;
     if (!_activeMtgTag) return;
     var label = optEl.querySelector('.mtg-tag-opt-label');
-    _activeMtgTag.textContent = label ? label.textContent.trim() : '';
+    _activeMtgTag.textContent = label ? label.textContent.trim() : optEl.dataset.bg;
     _activeMtgTag.style.background = optEl.dataset.bg;
     _activeMtgTag.style.color = optEl.dataset.color;
     closePicker();
     saveMtgs();
   };
 
+  // 确认自定义标签
   window.confirmCustomTag = function() {
     var val = document.getElementById('mtg-tag-custom-input').value.trim();
     if (!val || !_activeMtgTag) return;
@@ -2788,6 +2859,7 @@ textarea:focus{border-color:#b4b2a9}
     saveMtgs();
   };
 
+  // 回车确认自定义
   document.getElementById('mtg-tag-custom-input').addEventListener('keydown', function(e){
     if (e.key === 'Enter') confirmCustomTag();
   });
@@ -2798,9 +2870,10 @@ textarea:focus{border-color:#b4b2a9}
     _activeMtgTag = null;
   }
 
+  // 点击浮层外部关闭（不包括正在编辑 label）
   document.addEventListener('click', function(e){
-    if (picker.contains(e.target)) return;
-    if (e.target.classList.contains('mtg-tag')) return;
+    if (picker.contains(e.target)) return; // 浮层内部
+    if (e.target.classList.contains('mtg-tag')) return; // 标签本身
     closePicker();
   }, true);
 })();
