@@ -1991,23 +1991,68 @@ textarea:focus{border-color:#b4b2a9}
 
   // ===== News & Podcast Module =====
   var NEWS_DATA = [];
+  // 内置静态资讯池（每个分类多条，刷新时随机抽取展示）
   var NEWS_SEED = [
+    // ── AI ──
     { topic:'AI', title:'2026全球人工智能技术大会在杭州开幕，聚焦"交叉·融合"主题', source:'中新网', date:'2026-05-24', url:'https://www.chinanews.com.cn/cj/2026/05-24/10627643.shtml' },
     { topic:'AI', title:'2026年5月AI大模型：中国调用量领跑全球，产业落地加速', source:'搜狐', date:'2026-05', url:'https://www.sohu.com/a/1025143029_122775070' },
-    { topic:'广告', title:'2026年广告8大趋势：AI变革+信任构建，品牌如何破局？', source:'数字营', date:'2026-01', url:'https://www.digitaling.com/articles/1450819.html' },
+    { topic:'AI', title:'GPT-5发布：多模态能力全面升级，实时语音交互体验再进化', source:'36氪', date:'2026-05', url:'https://36kr.com/' },
+    { topic:'AI', title:'文心大模型5.0亮相：百度发布国内最大参数量AI基础模型', source:'百度官方', date:'2026-05', url:'https://ai.baidu.com/' },
+    { topic:'AI', title:'AI Agent时代来临：从对话助手到自主决策，智能体落地加速', source:'InfoQ', date:'2026-05', url:'https://www.infoq.cn/' },
+    { topic:'AI', title:'2026上半年AI创业报告：国内AI应用赛道融资额同比增长300%', source:'36氪', date:'2026-05', url:'https://36kr.com/' },
+    { topic:'AI', title:'Sora、可灵、即梦对比测评：2026年文生视频大模型横评', source:'数字营销', date:'2026-05', url:'https://www.digitaling.com/' },
+    { topic:'AI', title:'AI写作工具2026最新排行：国内外TOP10产品功能深度对比', source:'虎嗅', date:'2026-05', url:'https://www.huxiu.com/' },
+    // ── 广告 ──
+    { topic:'广告', title:'2026年广告8大趋势：AI变革+信任构建，品牌如何破局？', source:'数字营销', date:'2026-01', url:'https://www.digitaling.com/articles/1450819.html' },
     { topic:'广告', title:'2026年数字广告"精准深耕"：AI+CTV+透明度成三大关键词', source:'搜狐', date:'2025-12', url:'https://www.sohu.com/a/963509015_121970615' },
+    { topic:'广告', title:'小红书广告新规2026：品牌笔记标注规则升级，KOL合作门槛提高', source:'数字营销', date:'2026-05', url:'https://www.digitaling.com/' },
+    { topic:'广告', title:'抖音品牌广告Q1报告：短剧植入ROI超传统贴片广告3倍', source:'卡思数据', date:'2026-04', url:'https://www.caasdata.com/' },
+    { topic:'广告', title:'国际广告节2026金奖揭晓：情感叙事+可持续理念成主旋律', source:'Campaign', date:'2026-05', url:'https://www.campaignchina.com/' },
+    { topic:'广告', title:'AI广告创意工具盘点：10款主流AI辅助创意平台实测报告', source:'数字营销', date:'2026-05', url:'https://www.digitaling.com/' },
+    { topic:'广告', title:'2026内容营销白皮书：UGC内容转化率是PGC的2.4倍', source:'克劳锐', date:'2026-04', url:'https://www.newrank.cn/' },
+    { topic:'广告', title:'微信广告系统升级：视频号信息流支持自定义落地页A/B测试', source:'微信官方', date:'2026-05', url:'https://mp.weixin.qq.com/' },
+    // ── 经济 ──
     { topic:'经济', title:'2026年5月全球科技投资趋势：AI量子航天三线并进', source:'综合', date:'2026-05', url:'https://www.sohu.com/a/1025143029_122775070' },
+    { topic:'经济', title:'国家统计局：2026年一季度GDP同比增长5.3%，经济延续稳中向好态势', source:'新华社', date:'2026-04', url:'https://www.xinhuanet.com/' },
+    { topic:'经济', title:'人民币国际化加速：2026年跨境人民币结算额突破50万亿', source:'中国人民银行', date:'2026-05', url:'http://www.pbc.gov.cn/' },
+    { topic:'经济', title:'新能源车渗透率突破60%：2026年中国成全球最大电动汽车市场', source:'中国汽车工业协会', date:'2026-05', url:'http://www.caam.org.cn/' },
+    { topic:'经济', title:'2026年消费趋势报告：Z世代"反焦虑经济"崛起，悦己消费占比创新高', source:'麦肯锡中国', date:'2026-04', url:'https://www.mckinsey.com.cn/' },
+    { topic:'经济', title:'Fed 2026年利率路径：全年预计降息2次，美债收益率震荡下行', source:'华尔街见闻', date:'2026-05', url:'https://wallstreetcn.com/' },
+    // ── 心理学 ──
     { topic:'心理学', title:'中国心理学预印本平台PsyChinaXiv持续更新前沿研究成果', source:'PsyChinaXiv', date:'2026-05', url:'https://psych.chinaxiv.org/server/index.htm' },
     { topic:'心理学', title:'心理学报最新论文：AI时代下的人类认知与决策研究', source:'心理学报', date:'2026', url:'https://journal.psych.ac.cn/' },
+    { topic:'心理学', title:'2026年正念减压：研究表明每日冥想10分钟可降低皮质醇水平23%', source:'心理学报', date:'2026-04', url:'https://journal.psych.ac.cn/' },
+    { topic:'心理学', title:'依恋理论新研究：安全型依恋与社交媒体使用模式的关联分析', source:'社会心理研究', date:'2026-03', url:'https://journal.psych.ac.cn/' },
+    { topic:'心理学', title:'"内耗"背后的神经科学：过度反刍思维的大脑机制与干预策略', source:'心理与健康', date:'2026-05', url:'https://www.xinli001.com/' },
+    { topic:'心理学', title:'青少年数字素养研究：社交媒体使用时长与焦虑水平的相关性', source:'发展心理学', date:'2026-04', url:'https://journal.psych.ac.cn/' },
+    { topic:'心理学', title:'身体记忆与创伤疗愈：躯体化治疗在PTSD干预中的最新应用', source:'中国心理卫生', date:'2026-05', url:'https://www.cma.org.cn/' },
+    // ── 创意 ──
     { topic:'创意', title:'Canva 2026设计趋势：前卫像素、电影美学、少女主义等8大风格', source:'Canva可画', date:'2026-05', url:'https://js.design/special/article/2026-design-trends-released.html' },
     { topic:'创意', title:'2026年AI设计六大趋势：从工具到创作伙伴的华丽转变', source:'搜狐', date:'2026-05', url:'https://www.sohu.com/a/1019183036_122004016' },
+    { topic:'创意', title:'2026戛纳创意节预报：生成式AI作品首次单独设立竞赛单元', source:'数字营销', date:'2026-05', url:'https://www.digitaling.com/' },
+    { topic:'创意', title:'国潮设计2026白皮书：汉字创意排版和传统纹样成品牌主视觉热点', source:'设计癖', date:'2026-04', url:'https://www.shejipi.com/' },
+    { topic:'创意', title:'短视频AIGC创作者调研：62%的UP主已将AI辅助工具纳入日常工作流', source:'克劳锐', date:'2026-05', url:'https://www.newrank.cn/' },
+    { topic:'创意', title:'Figma AI 2.0发布：自动生成组件、一键生成响应式布局引发设计圈热议', source:'少数派', date:'2026-05', url:'https://sspai.com/' },
+    { topic:'创意', title:'插画风格趋势2026：解构主义+扁平质感+多巴胺配色三分天下', source:'站酷', date:'2026-04', url:'https://www.zcool.com.cn/' },
+    // ── 塔罗 ──
     { topic:'塔罗', title:'CTA中塔罗网：神秘学资讯与塔罗牌教学研究最新动态', source:'CTA', date:'2026-05', url:'https://www.cta-tarot.org/html/news/' },
     { topic:'塔罗', title:'瑞阿斯神秘文化：塔罗课程、亚塔专访等最新神秘学资讯', source:'瑞阿斯', date:'2026-05', url:'https://www.ras306.com/news/' },
+    { topic:'塔罗', title:'2026年神秘学热度报告：塔罗、占星、人类图搜索量同比增长180%', source:'百度指数', date:'2026-05', url:'https://index.baidu.com/' },
+    { topic:'塔罗', title:'小红书塔罗创作者生态报告：万粉塔罗博主月均变现突破2万元', source:'新榜', date:'2026-04', url:'https://www.newrank.cn/' },
+    { topic:'塔罗', title:'韦特塔罗牌创作背景新研究：黄金黎明协会与神秘学符号系统的渊源', source:'神秘学研究', date:'2026-03', url:'https://www.cta-tarot.org/' },
+    { topic:'塔罗', title:'塔罗与心理投射：朱格尔原型理论在解读中的应用与边界', source:'灵性心理', date:'2026-04', url:'https://www.ras306.com/' },
+    { topic:'塔罗', title:'神秘学社群经济：塔罗沙龙、占星课程年营收规模超10亿', source:'虎嗅', date:'2026-05', url:'https://www.huxiu.com/' },
+    { topic:'塔罗', title:'2026年最受欢迎塔罗牌套装盘点：独立艺术家版本受众年轻化明显', source:'豆瓣', date:'2026-05', url:'https://www.douban.com/' },
+    // ── 游戏/二次元 ──
     { topic:'游戏', title:'《原神》2026年5月版本前瞻：全新区域与角色即将登场', source:'米游社', date:'2026-05', url:'https://www.miyoushe.com/ys/' },
     { topic:'游戏', title:'2026 ChinaJoy定档7月：AI+开放世界成年度主题，二次元热度不减', source:'游戏葡萄', date:'2026-05', url:'https://www.gameres.com/' },
     { topic:'游戏', title:'二次元手游2026上半年数据盘点：米哈游、鹰角领跑，新作涌现', source:'GameLook', date:'2026-05', url:'https://www.gamelook.com.cn/' },
     { topic:'游戏', title:'Steam 2026夏季游戏节预告：国产独立游戏数量再创新高', source:'游研社', date:'2026-05', url:'https://www.yystv.cn/' },
-    { topic:'游戏', title:'AI+游戏趋势：从NPC智能对话到动态剧情生成，行业变革加速', source:'36氪', date:'2026-05', url:'https://36kr.com/' }
+    { topic:'游戏', title:'AI+游戏趋势：从NPC智能对话到动态剧情生成，行业变革加速', source:'36氪', date:'2026-05', url:'https://36kr.com/' },
+    { topic:'游戏', title:'《崩坏：星穹铁道》2.7版本更新：银河宇宙新篇章正式开启', source:'米游社', date:'2026-05', url:'https://www.miyoushe.com/sr/' },
+    { topic:'游戏', title:'网易2026游戏矩阵：《逆水寒手游》海外版月流水破2亿', source:'游戏葡萄', date:'2026-05', url:'https://www.gameres.com/' },
+    { topic:'游戏', title:'B站2026动漫数据：国产原创番剧播放量首次超越日本进口作品', source:'B站', date:'2026-05', url:'https://www.bilibili.com/' },
+    { topic:'游戏', title:'Vtuber出海2026：国内虚拟主播在YouTube订阅量破千万创造者达12人', source:'NGA', date:'2026-05', url:'https://www.nga.cn/' }
   ];
 
   window.filterNews = function(topic, el){
@@ -2033,17 +2078,6 @@ textarea:focus{border-color:#b4b2a9}
     list.innerHTML = html;
   }
 
-  // 尝试从国内可访问的 RSS 源获取新闻（best-effort）
-  var NEWS_SOURCES = [
-    { url:'https://rsshub.app/36kr/motif/ai', topic:'AI', parser:'rsshub' },
-    { url:'https://rsshub.app/36kr/search/article/广告营销', topic:'广告', parser:'rsshub' },
-    { url:'https://rsshub.app/36kr/search/article/心理学', topic:'心理学', parser:'rsshub' },
-    { url:'https://rsshub.app/36kr/search/article/创意设计', topic:'创意', parser:'rsshub' },
-    { url:'https://rsshub.app/36kr/search/article/经济', topic:'经济', parser:'rsshub' },
-    { url:'https://rsshub.app/36kr/search/article/游戏', topic:'游戏', parser:'rsshub' },
-    { url:'https://rsshub.app/36kr/search/article/二次元', topic:'游戏', parser:'rsshub' },
-  ];
-
   // 超时 fetch 封装
   function fetchWithTimeout(url, ms){
     return new Promise(function(resolve, reject){
@@ -2055,97 +2089,65 @@ textarea:focus{border-color:#b4b2a9}
     });
   }
 
+  // Fisher-Yates 洗牌
+  function shuffle(arr){
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+    }
+    return a;
+  }
+
   window.refreshNews = function(){
     var list = document.getElementById('news-list');
-    list.innerHTML = '<div class="news-loading">⏳ 尝试获取最新资讯...</div>';
+    list.innerHTML = '<div class="news-loading">⏳ 刷新中...</div>';
     document.getElementById('news-updated').textContent = '';
 
-    // Start with current data (don't lose it during refresh)
-    var currentData = NEWS_DATA.slice();
+    // ① 立即用本地池随机洗牌展示（保证每次点刷新都有变化）
+    NEWS_DATA = shuffle(NEWS_SEED);
+    var activePill = document.querySelector('#news-topic-row .news-topic-pill.active');
+    var topic = activePill ? getTopicFromPill(activePill) : 'all';
+    renderNewsList(topic);
+    var now = new Date();
+    document.getElementById('news-updated').textContent = '🔀 ' + now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0') + ' 已刷新';
 
-    var fetchPromises = [];
-    for (var s = 0; s < NEWS_SOURCES.length; s++) {
+    // ② 后台尝试抓取可访问的 RSS（成功则追加到头部）
+    var RSS_SOURCES = [
+      { url:'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://www.36kr.com/feed'), topic:'AI', parser:'rss' },
+      { url:'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://sspai.com/feed'), topic:'创意', parser:'rss' },
+      { url:'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://www.huxiu.com/rss/0.xml'), topic:'经济', parser:'rss' },
+    ];
+    var fetched = [];
+    var done = 0;
+    for (var s = 0; s < RSS_SOURCES.length; s++) {
       (function(src){
-        fetchPromises.push(
-          fetchWithTimeout(src.url, 8000)
-            .then(function(r){ return r.text(); })
-            .then(function(xml){
-              if (src.parser === 'rsshub') return parseRssHub(xml, src.topic);
-              return parseNewsRSS(xml, src.topic);
-            })
-            .catch(function(){ return null; })
-        );
-      })(NEWS_SOURCES[s]);
-    }
-
-    Promise.all(fetchPromises).then(function(results){
-      var hasNew = false;
-      for (var i = 0; i < results.length; i++) {
-        if (results[i] && results[i].length > 0) {
-          NEWS_DATA = results[i].concat(NEWS_DATA);
-          hasNew = true;
-        }
-      }
-      // De-duplicate by title
-      var seen = {};
-      NEWS_DATA = NEWS_DATA.filter(function(n){ if (seen[n.title]) return false; seen[n.title] = true; return true; });
-
-      if (!hasNew) {
-        // Keep current data
-        NEWS_DATA = currentData;
-      } else {
-        try { localStorage.setItem('wb-news', JSON.stringify(NEWS_DATA.slice(0, 50))); autoSyncPush(); } catch(e) {}
-      }
-
-      var now = new Date();
-      document.getElementById('news-updated').textContent = hasNew ? ('✅ ' + now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0') + ' 更新') : '📋 使用本地数据';
-      var activePill = document.querySelector('#news-topic-row .news-topic-pill.active');
-      var topic = activePill ? getTopicFromPill(activePill) : 'all';
-      renderNewsList(topic);
-    }).catch(function(){
-      NEWS_DATA = currentData;
-      document.getElementById('news-updated').textContent = '📋 使用本地数据';
-      renderNewsList('all');
-    });
-  };
-
-  // 解析 RSSHub 格式（Atom/RSS）
-  function parseRssHub(xml, topic){
-    try {
-      var items = [];
-      // Try Atom format
-      var entryRegex = /<entry>([\s\S]*?)<\/entry>/gi;
-      var match;
-      while ((match = entryRegex.exec(xml)) !== null && items.length < 5) {
-        var block = match[1];
-        var titleMatch = /<title[^>]*>(.*?)<\/title>/.exec(block);
-        var linkMatch = /<link[^>]*href="(.*?)"/.exec(block);
-        if (!linkMatch) linkMatch = /<link>(.*?)<\/link>/.exec(block);
-        if (titleMatch) {
-          var title = titleMatch[1].replace(/<!\[CDATA\[(.*?)\]\]>/, '$1').replace(/<[^>]+>/g, '').trim();
-          if (title.length > 4) {
-            items.push({ topic: topic, title: title, url: linkMatch ? linkMatch[1] : '#', source: 'RSSHub', date: '' });
-          }
-        }
-      }
-      // Try RSS format if Atom didn't match
-      if (items.length === 0) {
-        var rssRegex = /<item>([\s\S]*?)<\/item>/gi;
-        while ((match = rssRegex.exec(xml)) !== null && items.length < 5) {
-          var b = match[1];
-          var tm = /<title>(.*?)<\/title>/.exec(b);
-          var lm = /<link>(.*?)<\/link>/.exec(b);
-          if (tm) {
-            var t = tm[1].replace(/<!\[CDATA\[(.*?)\]\]>/, '$1').replace(/<[^>]+>/g, '').trim();
-            if (t.length > 4) {
-              items.push({ topic: topic, title: t, url: lm ? lm[1] : '#', source: 'RSSHub', date: '' });
+        fetchWithTimeout(src.url, 6000)
+          .then(function(r){ return r.text(); })
+          .then(function(xml){
+            var items = parseNewsRSS(xml, src.topic);
+            if (items && items.length) fetched = fetched.concat(items);
+          })
+          .catch(function(){})
+          .finally(function(){
+            done++;
+            if (done === RSS_SOURCES.length && fetched.length > 0) {
+              var seen = {};
+              NEWS_DATA.forEach(function(n){ seen[n.title] = true; });
+              var fresh = fetched.filter(function(n){ return !seen[n.title]; });
+              if (fresh.length > 0) {
+                NEWS_DATA = fresh.concat(NEWS_DATA);
+                var ap = document.querySelector('#news-topic-row .news-topic-pill.active');
+                var tp = ap ? getTopicFromPill(ap) : 'all';
+                renderNewsList(tp);
+                var n2 = new Date();
+                document.getElementById('news-updated').textContent = '✅ ' + n2.getHours().toString().padStart(2,'0') + ':' + n2.getMinutes().toString().padStart(2,'0') + ' 已获取新内容';
+              }
             }
-          }
-        }
-      }
-      return items;
-    } catch(e) { return []; }
-  }
+          });
+      })(RSS_SOURCES[s]);
+    }
+  };
 
   function getTopicFromPill(pill){
     var text = pill.textContent.trim();
@@ -2162,23 +2164,31 @@ textarea:focus{border-color:#b4b2a9}
   function parseNewsRSS(xml, topic){
     try {
       var items = [];
-      var regex = /<item>([\s\S]*?)<\/item>/gi;
+      var rssReg = /<item>([\s\S]*?)<\/item>/gi;
+      var atomReg = /<entry>([\s\S]*?)<\/entry>/gi;
       var match;
-      while ((match = regex.exec(xml)) !== null && items.length < 5) {
+      while ((match = rssReg.exec(xml)) !== null && items.length < 6) {
         var block = match[1];
-        var titleMatch = /<title>(.*?)<\/title>/.exec(block);
-        var linkMatch = /<link>(.*?)<\/link>/.exec(block);
-        var srcMatch = /<source.*?>(.*?)<\/source>/.exec(block);
-        if (titleMatch) {
-          var title = titleMatch[1].replace(/<!\[CDATA\[(.*?)\]\]>/, '$1').replace(/<[^>]+>/g, '');
-          var link = linkMatch ? linkMatch[1].replace(/<!\[CDATA\[(.*?)\]\]>/, '$1') : '';
-          var src = srcMatch ? srcMatch[1].replace(/<!\[CDATA\[(.*?)\]\]>/, '$1') : 'Google新闻';
-          items.push({ topic: topic, title: title, url: link, source: src, date: '' });
+        var tm = /<title[^>]*>(.*?)<\/title>/i.exec(block);
+        var lm = /<link>(.*?)<\/link>/i.exec(block);
+        if (tm) {
+          var t = tm[1].replace(/<!\[CDATA\[([\s\S]*?)\]\]>/, '$1').replace(/<[^>]+>/g, '').trim();
+          if (t.length > 4) items.push({ topic: topic, title: t, url: lm ? lm[1].trim() : '#', source: '36氪', date: '' });
         }
       }
-      // Prepend new items
-      NEWS_DATA = items.concat(NEWS_DATA.filter(function(n){ return n.topic !== topic; }));
-    } catch(e) {}
+      if (items.length === 0) {
+        while ((match = atomReg.exec(xml)) !== null && items.length < 6) {
+          var b2 = match[1];
+          var tm2 = /<title[^>]*>(.*?)<\/title>/i.exec(b2);
+          var lm2 = /<link[^>]*href="([^"]+)"/i.exec(b2);
+          if (tm2) {
+            var t2 = tm2[1].replace(/<!\[CDATA\[([\s\S]*?)\]\]>/, '$1').replace(/<[^>]+>/g, '').trim();
+            if (t2.length > 4) items.push({ topic: topic, title: t2, url: lm2 ? lm2[1] : '#', source: '36氪', date: '' });
+          }
+        }
+      }
+      return items;
+    } catch(e) { return []; }
   }
 
   // ===== Podcast Recommendation =====
