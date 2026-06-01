@@ -30,6 +30,9 @@ body{font-family:var(--font-sans);background:#f0f0ed;padding:20px;min-height:100
 .wk-title{font-size:15px;font-weight:500}
 .wk-date{font-size:12px;color:var(--color-text-secondary)}
 .week-label{font-size:11px;color:#7F77DD;background:#F3F0FF;padding:2px 8px;border-radius:10px;margin-left:8px;font-weight:500}
+.week-nav-btn{font-size:11px;color:#7F77DD;background:transparent;border:1px solid #E0D8F0;padding:1px 5px;border-radius:6px;cursor:pointer;margin-left:2px;line-height:1.4;transition:background .15s}
+.week-nav-btn:hover{background:#F3F0FF}
+.week-nav-btn:active{opacity:.7}
 .badge{display:inline-block;font-size:11px;padding:2px 7px;border-radius:4px;font-weight:500}
 .b-ad{background:#E6F1FB;color:#185FA5}
 .b-tarot{background:#EEEDFE;color:#534AB7}
@@ -355,6 +358,9 @@ textarea:focus{border-color:#b4b2a9}
     <div class="weather-bar">
       <span style="font-size:13px;font-weight:500">🌤 本周天气</span>
       <span class="week-label" id="week-label"></span>
+      <button id="week-prev-btn" class="week-nav-btn" onclick="switchToWeek(-1)" title="上周">&lt;</button>
+      <button id="week-next-btn" class="week-nav-btn" onclick="switchToWeek(1)" title="下周">&gt;</button>
+      <button id="week-today-btn" class="week-nav-btn" onclick="resetToCurrentWeek()" style="display:none" title="回到本周">📅</button>
       <span class="weather-city">
         <input type="text" id="wx-city" placeholder="输入城市" value="深圳" onkeydown="if(event.key==='Enter')fetchWeather()">
         <button onclick="fetchWeather()">查询</button>
@@ -756,9 +762,117 @@ textarea:focus{border-color:#b4b2a9}
     var weekNum = Math.ceil((dayOfYear + jan1.getDay() + 1) / 7);
     return now.getFullYear() + '-W' + weekNum;
   }
-  var WEEK_KEY = getWeekKey();
-  document.getElementById('week-label').textContent = '📅 ' + WEEK_KEY.replace('-', '年 第') + '周';
+  var WEEK_KEY = getWeekKey();          // 始终 = 真实本周（保存用）
+  var DISPLAY_WEEK = WEEK_KEY;          // 当前展示的周（导航可变）
+  document.getElementById('week-label').textContent = '📅 ' + DISPLAY_WEEK.replace('-', '年 第') + '周';
 
+  // 根据日期计算 WEEK_KEY
+  function getWeekKeyForDate(d){
+    var jan1 = new Date(d.getFullYear(), 0, 1);
+    var dayOfYear = Math.floor((d - jan1) / 86400000);
+    var weekNum = Math.ceil((dayOfYear + jan1.getDay() + 1) / 7);
+    return d.getFullYear() + '-W' + weekNum;
+  }
+
+  window.switchToWeek = switchToWeek;
+  window.resetToCurrentWeek = resetToCurrentWeek;
+  function offsetWeekKey(baseKey, offset){
+    var parts = baseKey.split('-W');
+    var year = parseInt(parts[0]), week = parseInt(parts[1]);
+    week += offset;
+    // 处理跨年回绕
+    while (week < 1) { year--; var lastDec31 = new Date(year, 11, 31); week += Math.ceil((365 + (lastDec31.getDay() || 0) + 1) / 7); }
+    return year + '-W' + week;
+  }
+
+  // 周切换：保存当前数据 → 切换到目标周 → 重新加载
+  function switchToWeek(offset){
+    if (offset === 0) return resetToCurrentWeek();
+    // 保存当前周所有数据
+    saveAllCurrent();
+    var target = offsetWeekKey(DISPLAY_WEEK, offset);
+    DISPLAY_WEEK = target;
+    updateWeekUI();
+    reloadAllForWeek();
+  }
+
+  function resetToCurrentWeek(){
+    if (DISPLAY_WEEK === WEEK_KEY) return;
+    saveAllCurrent();
+    DISPLAY_WEEK = WEEK_KEY;
+    updateWeekUI();
+    reloadAllForWeek();
+  }
+
+  function updateWeekUI(){
+    var isHistory = DISPLAY_WEEK !== WEEK_KEY;
+    var label = document.getElementById('week-label');
+    label.textContent = (isHistory ? '📋 ' : '📅 ') + DISPLAY_WEEK.replace('-', '年 第') + '周';
+    if (isHistory) label.title = '查看历史数据，不可编辑';
+    // 按钮状态
+    var todayBtn = document.getElementById('week-today-btn');
+    if (todayBtn) todayBtn.style.display = isHistory ? 'inline' : 'none';
+    // v-debug
+    var dbg = document.getElementById('v24-debug');
+    if (dbg) dbg.textContent = isHistory ? 'v24 📋' : 'v24';
+    // 禁用新增按钮（历史周不可编辑）
+    var addBtns = document.querySelectorAll('.add-btn');
+    for (var b = 0; b < addBtns.length; b++) {
+      addBtns[b].style.display = isHistory ? 'none' : '';
+    }
+    // 标记内容区域
+    var dayGrid = document.getElementById('day-grid');
+    if (dayGrid) dayGrid.style.opacity = isHistory ? '0.88' : '';
+    var tipEl = document.getElementById('week-history-tip');
+    if (isHistory) {
+      if (!tipEl) {
+        tipEl = document.createElement('div');
+        tipEl.id = 'week-history-tip';
+        tipEl.style.cssText = 'font-size:11px;color:#C0852B;background:#FFF8EC;padding:4px 12px;border-radius:6px;margin-bottom:8px;text-align:center';
+        tipEl.textContent = '📋 查看历史 · 此模式下不可编辑（点「回到本周」返回）';
+        var gridParent = dayGrid ? dayGrid.parentNode : null;
+        if (gridParent) gridParent.insertBefore(tipEl, dayGrid);
+      }
+    } else {
+      if (tipEl) tipEl.remove();
+    }
+  }
+
+  function saveAllCurrent(){
+    // 保存所有可能正在编辑的模块数据
+    try { saveTasks(); } catch(e){}
+    try { saveVideoState(); } catch(e){}
+    try { saveSleepData(); } catch(e){}
+    try { saveExeData(); } catch(e){}
+    try { saveMtgs(); } catch(e){}
+    try { saveGoals(); } catch(e){}
+    try { saveInspo(); } catch(e){}
+    try { saveMediaReview(); } catch(e){}
+    try { saveFans(); } catch(e){}
+    // 日记通过各自的 blur 事件逐个保存
+  }
+
+  function reloadAllForWeek(){
+    loadTasks();
+    loadVideoState();
+    loadSleepData();
+    loadExeData();
+    loadMtgs();
+    loadGoals();
+    loadInspo();
+    loadMediaReview();
+    loadFans();
+    loadAllDiaries();
+    loadPodcastRecommendation();
+    updateStats();
+    // 天气不作自动切换（只在本周自动获取）
+    if (DISPLAY_WEEK === WEEK_KEY) {
+      var savedCity = localStorage.getItem('wb-wx-city');
+      if (savedCity) { setTimeout(function(){ fetchWeather(); }, 300); }
+    }
+  }
+
+  // loadTasks 的 DISPLAY_WEEK 版本
   // 迁移旧格式数据（无周前缀）到当前周
   function migrateOldData(){
     var wbSleep = 'wb-sleep';
@@ -911,16 +1025,17 @@ textarea:focus{border-color:#b4b2a9}
 
   function loadTasks(){
     try {
-      var raw = localStorage.getItem('wb-' + WEEK_KEY + '-tasks');
+      var cols = document.querySelectorAll('#day-grid .day-col');
+      // 先清空所有 task 元素
+      for (var c = 0; c < cols.length; c++) {
+        var existing = cols[c].querySelectorAll('.task');
+        for (var e = 0; e < existing.length; e++) { existing[e].remove(); }
+      }
+      var raw = localStorage.getItem('wb-' + DISPLAY_WEEK + '-tasks');
       if (!raw) return false;
       var data = JSON.parse(raw);
-      var cols = document.querySelectorAll('#day-grid .day-col');
       for (var i = 0; i < cols.length && i < data.length; i++) {
         var col = cols[i];
-        // Remove existing tasks (keep diary-panel and add-btn)
-        var existing = col.querySelectorAll('.task');
-        for (var e = 0; e < existing.length; e++) { existing[e].remove(); }
-        // Rebuild tasks from saved data
         var btn = col.querySelector('.add-btn');
         var dayTasks = data[i];
         for (var j = 0; j < dayTasks.length; j++) {
@@ -947,8 +1062,8 @@ textarea:focus{border-color:#b4b2a9}
   // ===== FANS_IDS 必须定义在 init 块之前，否则 loadFans() 调用时它还是 undefined =====
   var FANS_IDS = window.FANS_IDS = ['dy-last','dy-cur','xhs-last','xhs-cur','xhs-orders','sph-last','sph-cur'];
 
-  function getVideoKey(){
-    return 'wb-' + WEEK_KEY + '-videos';
+  function getVideoKey(weekKey){
+    return 'wb-' + (weekKey || WEEK_KEY) + '-videos';
   }
 
   function readVideoState(){
@@ -981,7 +1096,7 @@ textarea:focus{border-color:#b4b2a9}
 
   function loadVideoState(){
     try {
-      var raw = localStorage.getItem(getVideoKey());
+      var raw = localStorage.getItem(getVideoKey(DISPLAY_WEEK));
       if (!raw) return;
       var state = JSON.parse(raw);
       applyVideoState(Array.isArray(state) ? state : []);
@@ -1056,7 +1171,7 @@ textarea:focus{border-color:#b4b2a9}
   // ── 读粉丝 ──
   function loadFans(){
     try {
-      var raw = localStorage.getItem('wb-' + WEEK_KEY + '-fans');
+      var raw = localStorage.getItem('wb-' + DISPLAY_WEEK + '-fans');
       console.log('[LOAD] fans raw from localStorage:', raw ? raw.substring(0,100) : 'null');
       if (!raw) return;
       var data = JSON.parse(raw);
@@ -1120,7 +1235,7 @@ textarea:focus{border-color:#b4b2a9}
 
   function loadInspo() {
     try {
-      var raw = localStorage.getItem('wb-' + WEEK_KEY + '-inspo');
+      var raw = localStorage.getItem('wb-' + DISPLAY_WEEK + '-inspo');
       if (!raw) return;
       var data = JSON.parse(raw);
       if (!Array.isArray(data) || data.length === 0) return;
@@ -1158,7 +1273,7 @@ textarea:focus{border-color:#b4b2a9}
   function loadMediaReview() {
     try {
       var ta = document.getElementById('media-review');
-      var saved = localStorage.getItem('wb-' + WEEK_KEY + '-media-review');
+      var saved = localStorage.getItem('wb-' + DISPLAY_WEEK + '-media-review');
       console.log('[LOAD] review raw from localStorage:', saved ? saved.substring(0,60) : 'null');
       if (ta && saved !== null && saved !== undefined) ta.value = saved;
     } catch(e) { console.error('[LOAD] review FAILED', e); }
@@ -1300,7 +1415,7 @@ textarea:focus{border-color:#b4b2a9}
   }
 
   function loadSleepData(){
-    var raw = localStorage.getItem('wb-' + WEEK_KEY + '-sleep');
+    var raw = localStorage.getItem('wb-' + DISPLAY_WEEK + '-sleep');
     if (!raw) return;
     try {
       var vals = JSON.parse(raw);
@@ -1323,9 +1438,24 @@ textarea:focus{border-color:#b4b2a9}
     return y + '-' + (m<10?'0':'') + m + '-' + (d<10?'0':'') + d;
   }
 
-  function getExeData(){
+  // 根据 DISPLAY_WEEK (如 "2026-W22") 计算对应的周一日期
+  function getExeWeekKeyForDisplay(){
+    var parts = DISPLAY_WEEK.split('-W');
+    var year = parseInt(parts[0]), weekNum = parseInt(parts[1]);
+    // Jan 4th is always in week 1 per ISO
+    var jan4 = new Date(year, 0, 4);
+    var jan4Day = jan4.getDay() || 7; // 1=Mon ... 7=Sun
+    var firstMonday = new Date(jan4);
+    firstMonday.setDate(jan4.getDate() - (jan4Day - 1));
+    // Now add (weekNum - 1) weeks to get the target Monday
+    firstMonday.setDate(firstMonday.getDate() + (weekNum - 1) * 7);
+    var y = firstMonday.getFullYear(), m = firstMonday.getMonth()+1, d = firstMonday.getDate();
+    return y + '-' + (m<10?'0':'') + m + '-' + (d<10?'0':'') + d;
+  }
+
+  function getExeData(forDisplay){
     try {
-      var wk = getExeWeekKey();
+      var wk = forDisplay ? getExeWeekKeyForDisplay() : getExeWeekKey();
       var raw = localStorage.getItem('wb-' + wk + '-exe');
       console.log('[LOAD] getExeData: wk=' + wk + ', key=wb-' + wk + '-exe, raw=', raw ? raw.substring(0,80) : 'null');
       if (!raw) {
@@ -1468,7 +1598,7 @@ textarea:focus{border-color:#b4b2a9}
       setTimeout(loadExeData, 100);
       return;
     }
-    var d = getExeData();
+    var d = getExeData(true);
     renderExeSessions(d);
     // 事件委托：统一在容器上监听 input / change，确保动态生成的行也能触发保存
     if (!container._exeListenerBound) {
@@ -1571,7 +1701,7 @@ textarea:focus{border-color:#b4b2a9}
 
   function loadGoals(){
     try {
-      var raw = localStorage.getItem('wb-' + WEEK_KEY + '-goals');
+      var raw = localStorage.getItem('wb-' + DISPLAY_WEEK + '-goals');
       if (!raw) return;
       var data = JSON.parse(raw);
       for (var cat in data) {
@@ -1604,7 +1734,7 @@ textarea:focus{border-color:#b4b2a9}
       return '<select class="mtg-weekday-select" onchange="saveMtgs()">' + opts + '</select>';
     }
     try {
-      var raw = localStorage.getItem('wb-' + WEEK_KEY + '-mtgs');
+      var raw = localStorage.getItem('wb-' + DISPLAY_WEEK + '-mtgs');
       if (!raw) {
         // Wire up change/blur listeners on hardcoded rows
         var existingInputs = document.querySelectorAll('#mtg-list .mtg-row input, #mtg-list .mtg-row select, #mtg-list .mtg-row [contenteditable]');
@@ -1918,7 +2048,7 @@ textarea:focus{border-color:#b4b2a9}
   }
   function loadWeatherSnapshot(){
     try {
-      var raw = localStorage.getItem('wb-' + WEEK_KEY + '-wx');
+      var raw = localStorage.getItem('wb-' + DISPLAY_WEEK + '-wx');
       return raw ? JSON.parse(raw) : null;
     } catch(e){ return null; }
   }
@@ -2065,7 +2195,7 @@ textarea:focus{border-color:#b4b2a9}
 
   function loadAllDiaries(){
     try {
-      var raw = localStorage.getItem('wb-' + WEEK_KEY + '-diary');
+      var raw = localStorage.getItem('wb-' + DISPLAY_WEEK + '-diary');
       if (!raw) return;
       var all = JSON.parse(raw);
       for (var i = 0; i < 7; i++) {
@@ -2840,7 +2970,7 @@ textarea:focus{border-color:#b4b2a9}
 </script>
 
 <!-- 静态调试标记：如果刷新后能看到这个，说明 HTML 已加载最新版 -->
-<div id="v23-debug" style="position:fixed;bottom:4px;right:4px;font-size:11px;color:#fff;background:#1D9E75;padding:3px 8px;border-radius:4px;z-index:99999;pointer-events:none;font-family:monospace">v23</div>
+<div id="v24-debug" style="position:fixed;bottom:4px;right:4px;font-size:11px;color:#fff;background:#1D9E75;padding:3px 8px;border-radius:4px;z-index:99999;pointer-events:none;font-family:monospace">v24</div>
 
 <!-- ===== 会议标签选择浮层 ===== -->
 <div id="mtg-tag-picker" class="mtg-tag-picker">
