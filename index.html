@@ -785,11 +785,11 @@ textarea:focus{border-color:#b4b2a9}
     return year + '-W' + week;
   }
 
-  // 周切换：保存当前数据 → 切换到目标周 → 重新加载
+  // 周切换：保存当前数据（仅离开本周时）→ 切换到目标周 → 重新加载
   function switchToWeek(offset){
     if (offset === 0) return resetToCurrentWeek();
-    // 保存当前周所有数据
-    saveAllCurrent();
+    // 只有离开本周时才保存——查看历史周期不应该触发保存
+    if (DISPLAY_WEEK === WEEK_KEY) saveAllCurrent();
     var target = offsetWeekKey(DISPLAY_WEEK, offset);
     DISPLAY_WEEK = target;
     updateWeekUI();
@@ -798,7 +798,7 @@ textarea:focus{border-color:#b4b2a9}
 
   function resetToCurrentWeek(){
     if (DISPLAY_WEEK === WEEK_KEY) return;
-    saveAllCurrent();
+    // 历史周→本周：不保存（历史数据是只读的，保存会污染本周数据）
     DISPLAY_WEEK = WEEK_KEY;
     updateWeekUI();
     reloadAllForWeek();
@@ -813,8 +813,8 @@ textarea:focus{border-color:#b4b2a9}
     var todayBtn = document.getElementById('week-today-btn');
     if (todayBtn) todayBtn.style.display = isHistory ? 'inline' : 'none';
     // v-debug
-    var dbg = document.getElementById('v24-debug');
-    if (dbg) dbg.textContent = isHistory ? 'v24 📋' : 'v24';
+    var dbg = document.getElementById('v25-debug');
+    if (dbg) dbg.textContent = isHistory ? 'v25 📋' : 'v25';
     // 禁用新增按钮（历史周不可编辑）
     var addBtns = document.querySelectorAll('.add-btn');
     for (var b = 0; b < addBtns.length; b++) {
@@ -2970,7 +2970,7 @@ textarea:focus{border-color:#b4b2a9}
 </script>
 
 <!-- 静态调试标记：如果刷新后能看到这个，说明 HTML 已加载最新版 -->
-<div id="v24-debug" style="position:fixed;bottom:4px;right:4px;font-size:11px;color:#fff;background:#1D9E75;padding:3px 8px;border-radius:4px;z-index:99999;pointer-events:none;font-family:monospace">v24</div>
+<div id="v25-debug" style="position:fixed;bottom:4px;right:4px;font-size:11px;color:#fff;background:#1D9E75;padding:3px 8px;border-radius:4px;z-index:99999;pointer-events:none;font-family:monospace">v25</div>
 
 <!-- ===== 会议标签选择浮层 ===== -->
 <div id="mtg-tag-picker" class="mtg-tag-picker">
