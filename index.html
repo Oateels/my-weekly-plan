@@ -832,8 +832,8 @@ try {
     var todayBtn = document.getElementById('week-today-btn');
     if (todayBtn) todayBtn.style.display = isHistory ? 'inline' : 'none';
     // v-debug
-    var dbg = document.getElementById('v29-debug');
-    if (dbg) dbg.textContent = isHistory ? 'v29 📋' : 'v29';
+    var dbg = document.getElementById('v30-debug');
+    if (dbg) dbg.textContent = isHistory ? 'v30 📋' : 'v30';
     // 禁用新增按钮（历史周不可编辑）
     var addBtns = document.querySelectorAll('.add-btn');
     for (var b = 0; b < addBtns.length; b++) {
@@ -2317,17 +2317,6 @@ try {
     list.innerHTML = html;
   }
 
-  // 超时 fetch 封装
-  function fetchWithTimeout(url, ms){
-    return new Promise(function(resolve, reject){
-      var ctrl = new AbortController();
-      var timer = setTimeout(function(){ ctrl.abort(); reject(new Error('timeout')); }, ms);
-      fetch(url, { signal: ctrl.signal })
-        .then(function(r){ clearTimeout(timer); resolve(r); })
-        .catch(function(e){ clearTimeout(timer); reject(e); });
-    });
-  }
-
   // Fisher-Yates 洗牌
   function shuffle(arr){
     var a = arr.slice();
@@ -2362,7 +2351,7 @@ try {
     var done = 0;
     for (var s = 0; s < RSS_SOURCES.length; s++) {
       (function(src){
-        fetchWithTimeout(src.url, 6000)
+        fetchWithTimeout(src.url, {}, 6000)
           .then(function(r){ return r.text(); })
           .then(function(xml){
             var items = parseNewsRSS(xml, src.topic);
@@ -2984,16 +2973,18 @@ try {
 
 } catch(e) {
   console.error('页面初始化失败:', e && e.message, e && e.stack);
+  var errMsg = (e && e.message) || String(e);
+  var errStack = (e && e.stack) || '';
   var st = document.getElementById('sync-status');
-  if (st) { st.innerHTML = '⚠️ 页面加载异常'; st.className = 'sync-status warn'; }
+  if (st) { st.innerHTML = '⚠️ 异常: ' + errMsg.substring(0, 60); st.className = 'sync-status warn'; st.title = errStack; }
   var wkDate = document.getElementById('wk-date');
-  if (wkDate) wkDate.textContent = '加载失败，请刷新页面';
+  if (wkDate) { wkDate.textContent = '错误: ' + errMsg.substring(0, 40); wkDate.title = errStack; }
 }
 })();
 </script>
 
 <!-- 静态调试标记：如果刷新后能看到这个，说明 HTML 已加载最新版 -->
-<div id="v29-debug" style="position:fixed;bottom:4px;right:4px;font-size:11px;color:#fff;background:#1D9E75;padding:3px 8px;border-radius:4px;z-index:99999;pointer-events:none;font-family:monospace">v29</div>
+<div id="v30-debug" style="position:fixed;bottom:4px;right:4px;font-size:11px;color:#fff;background:#1D9E75;padding:3px 8px;border-radius:4px;z-index:99999;pointer-events:none;font-family:monospace">v30</div>
 
 <!-- ===== 会议标签选择浮层 ===== -->
 <div id="mtg-tag-picker" class="mtg-tag-picker">
@@ -3117,8 +3108,8 @@ try {
   }
 
   // —— 更新调试标记为带时间戳 ——
-  var dbg = document.getElementById('v29-debug');
-  if (dbg) dbg.textContent = 'v29 ' + ts();
+  var dbg = document.getElementById('v30-debug');
+  if (dbg) dbg.textContent = 'v30 ' + ts();
 
   // —— 事件委托：input ——
   document.addEventListener('input', function(e) {
@@ -3133,12 +3124,12 @@ try {
     if (e.target && e.target.id && F.indexOf(e.target.id) >= 0) svFans();
   });
 
-  console.log('[v29] mtg time inputs + editable tag names, wk=' + wk);
+  console.log('[v30] mtg time inputs + editable tag names, wk=' + wk);
 })();
 
 // —— Service Worker（如果存在） ——
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('service-worker.js?v=10')
+  navigator.serviceWorker.register('service-worker.js?v=11')
     .then(function(reg) { console.log('SW registered:', reg.scope); })
     .catch(function(err) { console.log('SW failed:', err); });
 }
