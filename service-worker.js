@@ -1,7 +1,8 @@
-var CACHE_NAME = 'weekly-planner-v18';
+var CACHE_NAME = 'weekly-planner-v20';
 var ASSETS = [
   '/my-weekly-plan/',
   '/my-weekly-plan/index.html',
+  '/my-weekly-plan/周计划模板.html',
   '/my-weekly-plan/manifest.json',
   '/my-weekly-plan/icon-192.png',
   '/my-weekly-plan/icon-512.png'

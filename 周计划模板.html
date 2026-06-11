@@ -33,6 +33,7 @@ body{font-family:var(--font-sans);background:#f0f0ed;padding:20px;min-height:100
 .week-nav-btn{font-size:11px;color:#7F77DD;background:transparent;border:1px solid #E0D8F0;padding:1px 5px;border-radius:6px;cursor:pointer;margin-left:2px;line-height:1.4;transition:background .15s}
 .week-nav-btn:hover{background:#F3F0FF}
 .week-nav-btn:active{opacity:.7}
+.week-nav-global{display:flex;align-items:center;justify-content:center;gap:4px;padding:6px 10px;margin-bottom:10px;background:var(--card-bg);border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,0.06)}
 .badge{display:inline-block;font-size:11px;padding:2px 7px;border-radius:4px;font-weight:500}
 .b-ad{background:#E6F1FB;color:#185FA5}
 .b-tarot{background:#EEEDFE;color:#534AB7}
@@ -351,16 +352,21 @@ textarea:focus{border-color:#b4b2a9}
   <button class="tab" onclick="showTab('review')">📝 周复盘</button>
 </div>
 
+<!-- 全局周导航（所有标签页可见） -->
+<div class="week-nav-global" id="week-nav-global">
+  <span class="week-label" id="week-label"></span>
+  <button id="week-prev-btn" class="week-nav-btn" onclick="switchToWeek(-1)" title="上周">&lt;</button>
+  <button id="week-next-btn" class="week-nav-btn" onclick="switchToWeek(1)" title="下周">&gt;</button>
+  <button id="week-today-btn" class="week-nav-btn" onclick="resetToCurrentWeek()" style="display:none" title="回到本周">📅</button>
+</div>
+<div id="week-history-tip-container"></div>
+
 <!-- ===== 每日任务 ===== -->
 <div id="tab-daily" class="section visible">
   <!-- 天气模块 -->
   <div class="card" style="margin-bottom:14px;padding:12px 16px">
     <div class="weather-bar">
       <span style="font-size:13px;font-weight:500">🌤 本周天气</span>
-      <span class="week-label" id="week-label"></span>
-      <button id="week-prev-btn" class="week-nav-btn" onclick="switchToWeek(-1)" title="上周">&lt;</button>
-      <button id="week-next-btn" class="week-nav-btn" onclick="switchToWeek(1)" title="下周">&gt;</button>
-      <button id="week-today-btn" class="week-nav-btn" onclick="resetToCurrentWeek()" style="display:none" title="回到本周">📅</button>
       <span class="weather-city">
         <input type="text" id="wx-city" placeholder="输入城市" value="深圳" onkeydown="if(event.key==='Enter')fetchWeather()">
         <button onclick="fetchWeather()">查询</button>
@@ -813,8 +819,8 @@ textarea:focus{border-color:#b4b2a9}
     var todayBtn = document.getElementById('week-today-btn');
     if (todayBtn) todayBtn.style.display = isHistory ? 'inline' : 'none';
     // v-debug
-    var dbg = document.getElementById('v26-debug');
-    if (dbg) dbg.textContent = isHistory ? 'v26 📋' : 'v26';
+    var dbg = document.getElementById('v28-debug');
+    if (dbg) dbg.textContent = isHistory ? 'v28 📋' : 'v28';
     // 禁用新增按钮（历史周不可编辑）
     var addBtns = document.querySelectorAll('.add-btn');
     for (var b = 0; b < addBtns.length; b++) {
@@ -823,18 +829,16 @@ textarea:focus{border-color:#b4b2a9}
     // 标记内容区域
     var dayGrid = document.getElementById('day-grid');
     if (dayGrid) dayGrid.style.opacity = isHistory ? '0.88' : '';
-    var tipEl = document.getElementById('week-history-tip');
-    if (isHistory) {
-      if (!tipEl) {
-        tipEl = document.createElement('div');
-        tipEl.id = 'week-history-tip';
-        tipEl.style.cssText = 'font-size:11px;color:#C0852B;background:#FFF8EC;padding:4px 12px;border-radius:6px;margin-bottom:8px;text-align:center';
+    // 历史提示（全局容器，所有标签页可见）
+    var tipContainer = document.getElementById('week-history-tip-container');
+    if (tipContainer) {
+      tipContainer.innerHTML = '';
+      if (isHistory) {
+        var tipEl = document.createElement('div');
+        tipEl.style.cssText = 'font-size:11px;color:#C0852B;background:#FFF8EC;padding:4px 12px;border-radius:6px;margin-bottom:4px;text-align:center';
         tipEl.textContent = '📋 查看历史 · 此模式下不可编辑（点「回到本周」返回）';
-        var gridParent = dayGrid ? dayGrid.parentNode : null;
-        if (gridParent) gridParent.insertBefore(tipEl, dayGrid);
+        tipContainer.appendChild(tipEl);
       }
-    } else {
-      if (tipEl) tipEl.remove();
     }
   }
 
@@ -2300,15 +2304,14 @@ textarea:focus{border-color:#b4b2a9}
     list.innerHTML = html;
   }
 
-  // 超时 fetch 封装
-  function fetchWithTimeout(url, ms){
-    return new Promise(function(resolve, reject){
-      var ctrl = new AbortController();
-      var timer = setTimeout(function(){ ctrl.abort(); reject(new Error('timeout')); }, ms);
-      fetch(url, { signal: ctrl.signal })
-        .then(function(r){ clearTimeout(timer); resolve(r); })
-        .catch(function(e){ clearTimeout(timer); reject(e); });
-    });
+  // fetch 带超时封装（防止 api.github.com 挂起）
+  function fetchWithTimeout(url, options, timeoutMs){
+    timeoutMs = timeoutMs || 15000;
+    var controller = new AbortController();
+    var timer = setTimeout(function(){ try{ controller.abort(); }catch(e){} }, timeoutMs);
+    var opts = options || {};
+    opts.signal = controller.signal;
+    return fetch(url, opts).finally(function(){ clearTimeout(timer); });
   }
 
   // Fisher-Yates 洗牌
@@ -2522,19 +2525,18 @@ textarea:focus{border-color:#b4b2a9}
     }
   }
 
-  // 从云端拉取数据
+  // 从云端拉取数据（使用 fetchWithTimeout）
   function cloudPull(callback){
     var token = getSyncToken();
     if (!token) { updateSyncStatus(); if(callback) callback(false); return; }
 
     updateSyncStatus('<span class="sync-spin">⏳</span> 拉取中...', true);
 
-    fetch('https://api.github.com/repos/' + getSyncRepo() + '/contents/' + SYNC_FILE, {
+    fetchWithTimeout('https://api.github.com/repos/' + getSyncRepo() + '/contents/' + SYNC_FILE, {
       headers: { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github.v3+json' }
     })
     .then(function(r){
       if (r.status === 404) {
-        // 首次使用：云端无数据，触发自动推送创建文件
         localStorage.removeItem('wb-sync-sha');
         updateSyncStatus('☁️ 已同步', true);
         try { localStorage.setItem('wb-sync-last', String(Date.now())); } catch(e) {}
@@ -2546,7 +2548,7 @@ textarea:focus{border-color:#b4b2a9}
       return r.json();
     })
     .then(function(file){
-      if (!file) return; // 404 已在上层处理
+      if (!file) return;
       var binary = atob(file.content);
       var bytes = new Uint8Array(binary.length);
       for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
@@ -2557,7 +2559,6 @@ textarea:focus{border-color:#b4b2a9}
 
       if (!content._version) throw new Error('Invalid format');
 
-      // Smart merge: cloud data fills gaps
       var keys = Object.keys(content).filter(function(k){ return k.indexOf('wb-') === 0; });
       var mergedCount = 0;
       for (var i = 0; i < keys.length; i++) {
@@ -2575,7 +2576,7 @@ textarea:focus{border-color:#b4b2a9}
     })
     .catch(function(e){
       updateSyncStatus('☁️ 同步失败', false);
-      console.log('Cloud pull error:', e.message);
+      console.log('Cloud pull error:', e && e.message);
       if (callback) callback(false);
     });
   }
@@ -2608,22 +2609,19 @@ textarea:focus{border-color:#b4b2a9}
 
     var body = JSON.stringify({ message: '自动同步 ' + data._updatedAt, content: content, sha: sha });
 
-    fetch('https://api.github.com/repos/' + getSyncRepo() + '/contents/' + SYNC_FILE, {
+    fetchWithTimeout('https://api.github.com/repos/' + getSyncRepo() + '/contents/' + SYNC_FILE, {
       method: 'PUT',
       headers: { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
       body: body
     })
     .then(function(r){
       if (r.status === 409 && retryCount < 3) {
-        // SHA 冲突，拉取最新 SHA 后重试
         console.log('Push 409 conflict, retrying with fresh SHA (attempt ' + (retryCount + 1) + ')');
         return r.json().then(function() {
-          // 先拉取最新 SHA
-          return fetch('https://api.github.com/repos/' + getSyncRepo() + '/contents/' + SYNC_FILE, {
+          return fetchWithTimeout('https://api.github.com/repos/' + getSyncRepo() + '/contents/' + SYNC_FILE, {
             headers: { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github.v3+json' }
           }).then(function(r2){
             if (r2.status === 404) {
-              // 文件不存在，清空 SHA 重试
               localStorage.removeItem('wb-sync-sha');
               return cloudPush(forceReload, retryCount + 1);
             }
@@ -2635,7 +2633,6 @@ textarea:focus{border-color:#b4b2a9}
         });
       }
       if (r.status === 404) {
-        // 文件不存在，用空 sha 重试（首次创建）
         localStorage.removeItem('wb-sync-sha');
         if (retryCount < 1) return cloudPush(forceReload, retryCount + 1);
       }
@@ -2643,7 +2640,7 @@ textarea:focus{border-color:#b4b2a9}
       return r.json();
     })
     .then(function(result){
-      if (!result || !result.content) return; // 重试中，不处理
+      if (!result || !result.content) return;
       localStorage.setItem('wb-sync-sha', result.content.sha);
       try { localStorage.setItem('wb-sync-last', String(Date.now())); } catch(e) {}
       updateSyncStatus('☁️ 已同步', true);
@@ -2651,9 +2648,9 @@ textarea:focus{border-color:#b4b2a9}
       if (forceReload) location.reload();
     })
     .catch(function(e){
-      updateSyncStatus('☁️ 同步失败: ' + e.message.substring(0,20), false);
+      updateSyncStatus('☁️ 同步失败: ' + (e && e.message || '').substring(0,20), false);
       if (btn) btn.disabled = false;
-      console.log('Cloud push error:', e.message);
+      console.log('Cloud push error:', e && e.message);
     });
   }
 
@@ -2753,14 +2750,18 @@ textarea:focus{border-color:#b4b2a9}
   };
 
   // Auto-check sync status and pull on load
-  updateSyncStatus();
-  if (getSyncToken()) {
-    cloudPull(function(ok, mergedCount){
-      if (ok && mergedCount > 0) {
-        // Only reload if cloud brought in new data that was missing locally
-        setTimeout(function(){ location.reload(); }, 500);
-      }
-    });
+  try {
+    updateSyncStatus();
+    if (getSyncToken()) {
+      cloudPull(function(ok, mergedCount){
+        if (ok && mergedCount > 0) {
+          setTimeout(function(){ location.reload(); }, 500);
+        }
+      });
+    }
+  } catch(e) {
+    console.error('Init sync error:', e);
+    try { document.getElementById('sync-status').innerHTML = '☁️ 同步未就绪'; } catch(e2){}
   }
 
   // ===== 今日塔罗模块 =====
@@ -2957,7 +2958,7 @@ textarea:focus{border-color:#b4b2a9}
 </script>
 
 <!-- 静态调试标记：如果刷新后能看到这个，说明 HTML 已加载最新版 -->
-<div id="v26-debug" style="position:fixed;bottom:4px;right:4px;font-size:11px;color:#fff;background:#1D9E75;padding:3px 8px;border-radius:4px;z-index:99999;pointer-events:none;font-family:monospace">v26</div>
+<div id="v28-debug" style="position:fixed;bottom:4px;right:4px;font-size:11px;color:#fff;background:#1D9E75;padding:3px 8px;border-radius:4px;z-index:99999;pointer-events:none;font-family:monospace">v28</div>
 
 <!-- ===== 会议标签选择浮层 ===== -->
 <div id="mtg-tag-picker" class="mtg-tag-picker">
