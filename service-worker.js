@@ -1,4 +1,4 @@
-var CACHE_NAME = 'weekly-planner-v20';
+var CACHE_NAME = 'weekly-planner-v21';
 var ASSETS = [
   '/my-weekly-plan/',
   '/my-weekly-plan/index.html',
@@ -37,17 +37,32 @@ self.addEventListener('fetch', function(event) {
   }
 
   event.respondWith(
-    fetch(event.request, { cache: 'no-cache' }).then(function(response) {
-      if (event.request.method === 'GET' && response.status === 200) {
-        var cloned = response.clone();
-        caches.open(CACHE_NAME).then(function(cache) {
-          cache.put(event.request, cloned);
+    new Promise(function(resolve) {
+      var timeoutId = setTimeout(function() {
+        // 15s 超时，降级到缓存
+        caches.match(event.request).then(function(cached) {
+          resolve(cached || new Response('Offline', { status: 503 }));
+        }).catch(function() {
+          resolve(new Response('Offline', { status: 503 }));
         });
-      }
-      return response;
-    }).catch(function() {
-      return caches.match(event.request).then(function(cached) {
-        return cached || caches.match('/my-weekly-plan/index.html');
+      }, 15000);
+
+      fetch(event.request, { cache: 'no-cache' }).then(function(response) {
+        clearTimeout(timeoutId);
+        if (event.request.method === 'GET' && response.status === 200) {
+          var cloned = response.clone();
+          caches.open(CACHE_NAME).then(function(cache) {
+            cache.put(event.request, cloned);
+          });
+        }
+        resolve(response);
+      }).catch(function() {
+        clearTimeout(timeoutId);
+        caches.match(event.request).then(function(cached) {
+          resolve(cached || caches.match('/my-weekly-plan/index.html'));
+        }).catch(function() {
+          resolve(new Response('Offline', { status: 503 }));
+        });
       });
     })
   );

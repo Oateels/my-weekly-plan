@@ -748,6 +748,19 @@ textarea:focus{border-color:#b4b2a9}
 
 <script>
 (function(){
+try {
+
+  // 安全网：5秒后如果状态还是"检查中"，强制更新
+  setTimeout(function(){
+    try {
+      var st = document.getElementById('sync-status');
+      if (st && (st.innerHTML.indexOf('检查中') >= 0 || st.innerHTML.indexOf('检查中') >= 0)) {
+        st.innerHTML = '☁️ 离线模式';
+        st.className = 'sync-status';
+      }
+    } catch(e) {}
+  }, 5000);
+
   function getWeekRange(){
     var now = new Date();
     var day = now.getDay() || 7;
@@ -819,8 +832,8 @@ textarea:focus{border-color:#b4b2a9}
     var todayBtn = document.getElementById('week-today-btn');
     if (todayBtn) todayBtn.style.display = isHistory ? 'inline' : 'none';
     // v-debug
-    var dbg = document.getElementById('v28-debug');
-    if (dbg) dbg.textContent = isHistory ? 'v28 📋' : 'v28';
+    var dbg = document.getElementById('v29-debug');
+    if (dbg) dbg.textContent = isHistory ? 'v29 📋' : 'v29';
     // 禁用新增按钮（历史周不可编辑）
     var addBtns = document.querySelectorAll('.add-btn');
     for (var b = 0; b < addBtns.length; b++) {
@@ -2519,6 +2532,11 @@ textarea:focus{border-color:#b4b2a9}
           st.className = 'sync-status';
         }
         hint.style.display = 'none';
+      } else {
+        // 有 token 但从未同步过 → 显示等待首次同步
+        st.innerHTML = '☁️ 等待首次同步';
+        st.className = 'sync-status';
+        hint.style.display = 'none';
       }
       btnSetup.style.display = 'inline-block';
       btnPush.style.display = 'inline-block';
@@ -2954,11 +2972,18 @@ textarea:focus{border-color:#b4b2a9}
     initTarot();
   })();
 
+} catch(e) {
+  console.error('页面初始化失败:', e && e.message, e && e.stack);
+  var st = document.getElementById('sync-status');
+  if (st) { st.innerHTML = '⚠️ 页面加载异常'; st.className = 'sync-status warn'; }
+  var wkDate = document.getElementById('wk-date');
+  if (wkDate) wkDate.textContent = '加载失败，请刷新页面';
+}
 })();
 </script>
 
 <!-- 静态调试标记：如果刷新后能看到这个，说明 HTML 已加载最新版 -->
-<div id="v28-debug" style="position:fixed;bottom:4px;right:4px;font-size:11px;color:#fff;background:#1D9E75;padding:3px 8px;border-radius:4px;z-index:99999;pointer-events:none;font-family:monospace">v28</div>
+<div id="v29-debug" style="position:fixed;bottom:4px;right:4px;font-size:11px;color:#fff;background:#1D9E75;padding:3px 8px;border-radius:4px;z-index:99999;pointer-events:none;font-family:monospace">v29</div>
 
 <!-- ===== 会议标签选择浮层 ===== -->
 <div id="mtg-tag-picker" class="mtg-tag-picker">
@@ -3082,8 +3107,8 @@ textarea:focus{border-color:#b4b2a9}
   }
 
   // —— 更新调试标记为带时间戳 ——
-  var dbg = document.getElementById('v21-debug');
-  if (dbg) dbg.textContent = 'v21 ' + ts();
+  var dbg = document.getElementById('v29-debug');
+  if (dbg) dbg.textContent = 'v29 ' + ts();
 
   // —— 事件委托：input ——
   document.addEventListener('input', function(e) {
@@ -3098,12 +3123,12 @@ textarea:focus{border-color:#b4b2a9}
     if (e.target && e.target.id && F.indexOf(e.target.id) >= 0) svFans();
   });
 
-  console.log('[v21] mtg time inputs + editable tag names, wk=' + wk);
+  console.log('[v29] mtg time inputs + editable tag names, wk=' + wk);
 })();
 
 // —— Service Worker（如果存在） ——
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('service-worker.js?v=9')
+  navigator.serviceWorker.register('service-worker.js?v=10')
     .then(function(reg) { console.log('SW registered:', reg.scope); })
     .catch(function(err) { console.log('SW failed:', err); });
 }
