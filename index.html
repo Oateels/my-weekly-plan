@@ -832,8 +832,8 @@ try {
     var todayBtn = document.getElementById('week-today-btn');
     if (todayBtn) todayBtn.style.display = isHistory ? 'inline' : 'none';
     // v-debug
-    var dbg = document.getElementById('v30-debug');
-    if (dbg) dbg.textContent = isHistory ? 'v30 📋' : 'v30';
+    var dbg = document.getElementById('v31-debug');
+    if (dbg) dbg.textContent = isHistory ? 'v31 📋' : 'v31';
     // 禁用新增按钮（历史周不可编辑）
     var addBtns = document.querySelectorAll('.add-btn');
     for (var b = 0; b < addBtns.length; b++) {
@@ -1129,7 +1129,7 @@ try {
     for (var i = 0; i < tasks.length; i++) { setupTask(tasks[i]); }
     loadVideoState();
     updateStats();
-    loadSleepData();
+    setTimeout(loadSleepData, 0);  // 延迟执行：drawSleepChart 定义在后方 (line ~1338)
     setTimeout(loadExeData, 0);  // 异步执行，确保 DOM 已解析
     loadMtgs();
     loadGoals();
@@ -2984,7 +2984,7 @@ try {
 </script>
 
 <!-- 静态调试标记：如果刷新后能看到这个，说明 HTML 已加载最新版 -->
-<div id="v30-debug" style="position:fixed;bottom:4px;right:4px;font-size:11px;color:#fff;background:#1D9E75;padding:3px 8px;border-radius:4px;z-index:99999;pointer-events:none;font-family:monospace">v30</div>
+<div id="v31-debug" style="position:fixed;bottom:4px;right:4px;font-size:11px;color:#fff;background:#1D9E75;padding:3px 8px;border-radius:4px;z-index:99999;pointer-events:none;font-family:monospace">v31</div>
 
 <!-- ===== 会议标签选择浮层 ===== -->
 <div id="mtg-tag-picker" class="mtg-tag-picker">
@@ -3108,8 +3108,8 @@ try {
   }
 
   // —— 更新调试标记为带时间戳 ——
-  var dbg = document.getElementById('v30-debug');
-  if (dbg) dbg.textContent = 'v30 ' + ts();
+  var dbg = document.getElementById('v31-debug');
+  if (dbg) dbg.textContent = 'v31 ' + ts();
 
   // —— 事件委托：input ——
   document.addEventListener('input', function(e) {
@@ -3124,7 +3124,7 @@ try {
     if (e.target && e.target.id && F.indexOf(e.target.id) >= 0) svFans();
   });
 
-  console.log('[v30] mtg time inputs + editable tag names, wk=' + wk);
+  console.log('[v31] mtg time inputs + editable tag names, wk=' + wk);
 })();
 
 // —— Service Worker（如果存在） ——
