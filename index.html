@@ -813,8 +813,8 @@ textarea:focus{border-color:#b4b2a9}
     var todayBtn = document.getElementById('week-today-btn');
     if (todayBtn) todayBtn.style.display = isHistory ? 'inline' : 'none';
     // v-debug
-    var dbg = document.getElementById('v25-debug');
-    if (dbg) dbg.textContent = isHistory ? 'v25 📋' : 'v25';
+    var dbg = document.getElementById('v26-debug');
+    if (dbg) dbg.textContent = isHistory ? 'v26 📋' : 'v26';
     // 禁用新增按钮（历史周不可编辑）
     var addBtns = document.querySelectorAll('.add-btn');
     for (var b = 0; b < addBtns.length; b++) {
@@ -1416,7 +1416,12 @@ textarea:focus{border-color:#b4b2a9}
 
   function loadSleepData(){
     var raw = localStorage.getItem('wb-' + DISPLAY_WEEK + '-sleep');
-    if (!raw) return;
+    // 先清空所有输入框（防止切周时 DOM 残留上周数据）
+    for (var i = 0; i < 7; i++) {
+      var el = document.getElementById('sl' + i);
+      if (el) el.value = '';
+    }
+    if (!raw) { drawSleepChart(); return; }
     try {
       var vals = JSON.parse(raw);
       for (var i = 0; i < 7; i++) {
@@ -1457,28 +1462,10 @@ textarea:focus{border-color:#b4b2a9}
     try {
       var wk = forDisplay ? getExeWeekKeyForDisplay() : getExeWeekKey();
       var raw = localStorage.getItem('wb-' + wk + '-exe');
-      console.log('[LOAD] getExeData: wk=' + wk + ', key=wb-' + wk + '-exe, raw=', raw ? raw.substring(0,80) : 'null');
-      if (!raw) {
-        // 兼容旧格式：尝试 YYYY-WNN 格式
-        var oldWk = getWeekKey();
-        raw = localStorage.getItem('wb-' + oldWk + '-exe');
-        if (raw) console.log('[LOAD] Found old-format data, wk=' + oldWk);
-      }
-      if (!raw) {
-        // 兜底：当前周没数据，尝试找最近有数据的周（最多往前找4周）
-        for (var w = 1; w <= 4; w++) {
-          var d2 = new Date(); d2.setDate(d2.getDate() - w * 7);
-          var key = 'wb-' + d2.getFullYear() + '-' + (function(){
-            var jan1 = new Date(d2.getFullYear(),0,1);
-            return Math.ceil((Math.floor((d2-jan1)/86400000)+jan1.getDay()+1)/7);
-          })() + '-exe';
-          var r = localStorage.getItem(key);
-          if (r) { console.log('[LOAD] Found data in nearby week:', key); raw = r; break; }
-        }
-      }
+      // 本周无数据 → 返回空模板（不跨周拉取历史）
       if (!raw) return {goal: 3, sessions: []};
       return JSON.parse(raw);
-    } catch(e) { console.error('[LOAD] getExeData ERROR:', e); return {goal: 3, sessions: []}; }
+    } catch(e) { return {goal: 3, sessions: []}; }
   }
 
   function saveExeData(){
@@ -2970,7 +2957,7 @@ textarea:focus{border-color:#b4b2a9}
 </script>
 
 <!-- 静态调试标记：如果刷新后能看到这个，说明 HTML 已加载最新版 -->
-<div id="v25-debug" style="position:fixed;bottom:4px;right:4px;font-size:11px;color:#fff;background:#1D9E75;padding:3px 8px;border-radius:4px;z-index:99999;pointer-events:none;font-family:monospace">v25</div>
+<div id="v26-debug" style="position:fixed;bottom:4px;right:4px;font-size:11px;color:#fff;background:#1D9E75;padding:3px 8px;border-radius:4px;z-index:99999;pointer-events:none;font-family:monospace">v26</div>
 
 <!-- ===== 会议标签选择浮层 ===== -->
 <div id="mtg-tag-picker" class="mtg-tag-picker">
