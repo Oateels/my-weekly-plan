@@ -832,8 +832,8 @@ try {
     var todayBtn = document.getElementById('week-today-btn');
     if (todayBtn) todayBtn.style.display = isHistory ? 'inline' : 'none';
     // v-debug
-    var dbg = document.getElementById('v33-debug');
-    if (dbg) dbg.textContent = isHistory ? 'v33 📋' : 'v33';
+    var dbg = document.getElementById('v34-debug');
+    if (dbg) dbg.textContent = isHistory ? 'v34 📋' : 'v34';
     // 禁用新增按钮（历史周不可编辑）
     var addBtns = document.querySelectorAll('.add-btn');
     for (var b = 0; b < addBtns.length; b++) {
@@ -1908,7 +1908,8 @@ try {
 
     var coords = CITY_COORDS[city];
     var fetchWeatherByCoord = function(lat, lon, displayName){
-      var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat.toFixed(4) + '&longitude=' + lon.toFixed(4) + '&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max,wind_speed_10m_max&timezone=Asia/Shanghai&forecast_days=7';
+      // past_days=6 让 API 同时返回本周过去的天气（最多6天历史），forecast_days=7 返回今天起7天预报
+      var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat.toFixed(4) + '&longitude=' + lon.toFixed(4) + '&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max,wind_speed_10m_max&timezone=Asia/Shanghai&past_days=6&forecast_days=7';
       // AbortController for timeout
       var ctrl = new AbortController();
       var timer = setTimeout(function(){ ctrl.abort(); }, 10000);
@@ -2080,8 +2081,9 @@ try {
 
   // Save & load weather snapshot so past days keep real temperature data
   function saveWeatherSnapshot(wx){
-    // 附带抓取日期，用于渲染时还原 forecastIdx
-    var snap = Object.assign({}, wx, { _fetchDate: new Date().toISOString().split('T')[0] });
+    // 从 wx.daily.time[0] 读取 API 返回的起始日期（更可靠）
+    var fetchDate = (wx.daily && wx.daily.time && wx.daily.time[0]) ? wx.daily.time[0] : new Date().toISOString().split('T')[0];
+    var snap = Object.assign({}, wx, { _fetchDate: fetchDate });
     try { localStorage.setItem('wb-' + WEEK_KEY + '-wx', JSON.stringify(snap)); } catch(e){}
   }
   function loadWeatherSnapshot(){
@@ -2089,6 +2091,12 @@ try {
       var raw = localStorage.getItem('wb-' + DISPLAY_WEEK + '-wx');
       return raw ? JSON.parse(raw) : null;
     } catch(e){ return null; }
+  }
+
+  // 把日期对象转成 YYYY-MM-DD 字符串（本地时区，避免 UTC 偏移导致日期差1天）
+  function dateToYMD(d){
+    var y = d.getFullYear(), m = d.getMonth()+1, day = d.getDate();
+    return y + '-' + (m<10?'0':'') + m + '-' + (day<10?'0':'') + day;
   }
 
   function renderWeather(wx, cityName){
@@ -2112,36 +2120,17 @@ try {
       // API returns 7 days starting from today, so forecastIdx = i - todayOffset
       var forecastIdx = i - todayOffset;
 
-      // Past day: use snapshot to look up the correct forecast index
+      // Past day: now API returns past_days=6, so past dates are IN dailies.time directly
+      // forecastIdx < 0 means the date is BEFORE today in the API array
       if (forecastIdx < 0) {
-        var snap = loadWeatherSnapshot();
-        var dateStr = d.toISOString().split('T')[0]; // YYYY-MM-DD
-        var snapIdx = -1;
-
-        if (snap && snap.daily && snap.daily.time) {
-          // First try direct date match (in case API returned past dates)
-          snapIdx = snap.daily.time.indexOf(dateStr);
-
-          // If not found, derive from _fetchDate offset
-          // snap.daily is from fetchDate, daily[0] = fetchDate
-          if (snapIdx < 0 && snap._fetchDate) {
-            var fetchMs = new Date(snap._fetchDate).getTime();
-            var targetMs = d.getTime();
-            var diffDays = Math.round((targetMs - fetchMs) / 86400000);
-            // diffDays < 0 means this day is before fetchDate → no data
-            // diffDays >= 0 && diffDays < snap.daily.time.length → in forecast window
-            if (diffDays >= 0 && diffDays < snap.daily.time.length) {
-              snapIdx = diffDays;
-            }
-          }
-        }
-
-        if (snapIdx >= 0) {
-          var maxT = Math.round(snap.daily.temperature_2m_max[snapIdx]);
-          var minT = Math.round(snap.daily.temperature_2m_min[snapIdx]);
-          var code = snap.daily.weather_code[snapIdx];
-          var precip = snap.daily.precipitation_probability_max[snapIdx] || 0;
-          var wind = snap.daily.wind_speed_10m_max[snapIdx] || 0;
+        var dateStr = dateToYMD(d);
+        var pastIdx = dailies.time.indexOf(dateStr);
+        if (pastIdx >= 0) {
+          var maxT = Math.round(dailies.temperature_2m_max[pastIdx]);
+          var minT = Math.round(dailies.temperature_2m_min[pastIdx]);
+          var code = dailies.weather_code[pastIdx];
+          var precip = dailies.precipitation_probability_max[pastIdx] || 0;
+          var wind = dailies.wind_speed_10m_max[pastIdx] || 0;
           var emoji = getWeatherEmoji(code);
           var clothes = getClothingGuide(maxT);
           var tips = getPrecautions(code, maxT, wind, precip);
@@ -2159,23 +2148,59 @@ try {
             '<div class="wx-tip">⚠ ' + tips + '</div>' +
             '</div>';
         } else {
-          html += '<div class="wx-card" style="opacity:0.5">' +
-            '<div class="wx-day">周' + daysCN[i] + ' ' + (d.getMonth()+1) + '/' + d.getDate() + '</div>' +
-            '<div class="wx-icon">📅</div>' +
-            '<div class="wx-temp" style="font-size:12px;color:#999">—</div>' +
-            '<div class="wx-temp-lo" style="font-size:12px;color:#999">—</div>' +
-            '<div class="wx-divider"></div>' +
-            '<div class="wx-virgo-header">今日指引</div>' +
-            '<div class="wx-virgo-do">✨ ' + virgo.activity + '</div>' +
-            '<div class="wx-virgo-color">🎨 <span class="wx-color-dot" style="background:' + virgo.colorHex + '"></span> ' + virgo.colorName + '</div>' +
-            '<div class="wx-zodiac" style="font-size:9px;color:#888">' + virgo.colorDesc + '</div>' +
-            '</div>';
+          // Fallback to snapshot for dates not in current API response
+          var snap = loadWeatherSnapshot();
+          var snapIdx = -1;
+          if (snap && snap.daily && snap.daily.time) {
+            snapIdx = snap.daily.time.indexOf(dateStr);
+            if (snapIdx < 0 && snap._fetchDate) {
+              var parseDateStr2 = function(s){ var p=s.split('-'); return new Date(+p[0], +p[1]-1, +p[2]).getTime(); };
+              var diffDays2 = Math.round((parseDateStr2(dateStr) - parseDateStr2(snap._fetchDate)) / 86400000);
+              if (diffDays2 >= 0 && diffDays2 < snap.daily.time.length) snapIdx = diffDays2;
+            }
+          }
+          if (snapIdx >= 0) {
+            var sMax = Math.round(snap.daily.temperature_2m_max[snapIdx]);
+            var sMin = Math.round(snap.daily.temperature_2m_min[snapIdx]);
+            var sCode = snap.daily.weather_code[snapIdx];
+            var sEmoji = getWeatherEmoji(sCode);
+            var sClothes = getClothingGuide(sMax);
+            var sTips = getPrecautions(sCode, sMax, snap.daily.wind_speed_10m_max[snapIdx]||0, snap.daily.precipitation_probability_max[snapIdx]||0);
+            html += '<div class="wx-card" style="opacity:0.5">' +
+              '<div class="wx-day">周' + daysCN[i] + ' ' + (d.getMonth()+1) + '/' + d.getDate() + '</div>' +
+              '<div class="wx-icon">' + sEmoji + '</div>' +
+              '<div class="wx-temp">' + sMax + '°</div>' +
+              '<div class="wx-temp-lo">' + sMin + '°</div>' +
+              '<div class="wx-divider"></div>' +
+              '<div class="wx-virgo-header">今日指引</div>' +
+              '<div class="wx-virgo-do">✨ ' + virgo.activity + '</div>' +
+              '<div class="wx-virgo-color">🎨 <span class="wx-color-dot" style="background:' + virgo.colorHex + '"></span> ' + virgo.colorName + '</div>' +
+              '<div class="wx-zodiac" style="font-size:9px;color:#888">' + virgo.colorDesc + '</div>' +
+              '<div class="wx-clothes">👔 ' + sClothes + '</div>' +
+              '<div class="wx-tip">⚠ ' + sTips + '</div>' +
+              '</div>';
+          } else {
+            html += '<div class="wx-card" style="opacity:0.5">' +
+              '<div class="wx-day">周' + daysCN[i] + ' ' + (d.getMonth()+1) + '/' + d.getDate() + '</div>' +
+              '<div class="wx-icon">📅</div>' +
+              '<div class="wx-temp" style="font-size:12px;color:#999">—</div>' +
+              '<div class="wx-temp-lo" style="font-size:12px;color:#999">—</div>' +
+              '<div class="wx-divider"></div>' +
+              '<div class="wx-virgo-header">今日指引</div>' +
+              '<div class="wx-virgo-do">✨ ' + virgo.activity + '</div>' +
+              '<div class="wx-virgo-color">🎨 <span class="wx-color-dot" style="background:' + virgo.colorHex + '"></span> ' + virgo.colorName + '</div>' +
+              '<div class="wx-zodiac" style="font-size:9px;color:#888">' + virgo.colorDesc + '</div>' +
+              '</div>';
+          }
         }
         continue;
       }
 
-      // Future day beyond forecast range (shouldn't happen with 7-day forecast)
-      if (forecastIdx >= dailies.time.length) {
+      // Future day beyond forecast range (shouldn't happen with past_days=6 + forecast_days=7)
+      // Use indexOf to get accurate index regardless of past_days offset
+      var todayDateStr = dateToYMD(d);
+      var forecastIdx2 = dailies.time.indexOf(todayDateStr);
+      if (forecastIdx2 < 0 || forecastIdx2 >= dailies.time.length) {
         html += '<div class="wx-card" style="opacity:0.55">' +
           '<div class="wx-day">周' + daysCN[i] + ' ' + (d.getMonth()+1) + '/' + d.getDate() + '</div>' +
           '<div class="wx-icon">📅</div>' +
@@ -2184,11 +2209,11 @@ try {
         continue;
       }
 
-      var maxT = Math.round(dailies.temperature_2m_max[forecastIdx]);
-      var minT = Math.round(dailies.temperature_2m_min[forecastIdx]);
-      var code = dailies.weather_code[forecastIdx];
-      var precip = dailies.precipitation_probability_max[forecastIdx] || 0;
-      var wind = dailies.wind_speed_10m_max[forecastIdx] || 0;
+      var maxT = Math.round(dailies.temperature_2m_max[forecastIdx2]);
+      var minT = Math.round(dailies.temperature_2m_min[forecastIdx2]);
+      var code = dailies.weather_code[forecastIdx2];
+      var precip = dailies.precipitation_probability_max[forecastIdx2] || 0;
+      var wind = dailies.wind_speed_10m_max[forecastIdx2] || 0;
       var emoji = getWeatherEmoji(code);
       var clothes = getClothingGuide(maxT);
       var tips = getPrecautions(code, maxT, wind, precip);
@@ -3034,7 +3059,7 @@ try {
 </script>
 
 <!-- 静态调试标记：如果刷新后能看到这个，说明 HTML 已加载最新版 -->
-<div id="v33-debug" style="position:fixed;bottom:4px;right:4px;font-size:11px;color:#fff;background:#1D9E75;padding:3px 8px;border-radius:4px;z-index:99999;pointer-events:none;font-family:monospace">v33</div>
+<div id="v34-debug" style="position:fixed;bottom:4px;right:4px;font-size:11px;color:#fff;background:#1D9E75;padding:3px 8px;border-radius:4px;z-index:99999;pointer-events:none;font-family:monospace">v34</div>
 
 <!-- ===== 会议标签选择浮层 ===== -->
 <div id="mtg-tag-picker" class="mtg-tag-picker">
@@ -3158,8 +3183,8 @@ try {
   }
 
   // —— 更新调试标记为带时间戳 ——
-  var dbg = document.getElementById('v33-debug');
-  if (dbg) dbg.textContent = 'v33 ' + ts();
+  var dbg = document.getElementById('v34-debug');
+  if (dbg) dbg.textContent = 'v34 ' + ts();
 
   // —— 事件委托：input ——
   document.addEventListener('input', function(e) {
@@ -3174,7 +3199,7 @@ try {
     if (e.target && e.target.id && F.indexOf(e.target.id) >= 0) svFans();
   });
 
-  console.log('[v33] mtg time inputs + editable tag names, wk=' + wk);
+  console.log('[v34] mtg time inputs + editable tag names, wk=' + wk);
 })();
 
 // —— Service Worker（如果存在） ——
