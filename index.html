@@ -773,25 +773,88 @@ try {
   }
   document.getElementById('wk-date').textContent = getWeekRange();
 
-  // ===== 周归档系统 =====
+  // ===== 周归档系统（ISO 8601 周计算，周一为一周之首） =====
   function getWeekKey(){
     var now = new Date();
-    var jan1 = new Date(now.getFullYear(), 0, 1);
-    var dayOfYear = Math.floor((now - jan1) / 86400000);
-    var weekNum = Math.ceil((dayOfYear + jan1.getDay() + 1) / 7);
-    return now.getFullYear() + '-W' + weekNum;
+    // ISO 8601: 1月4日所在周为第1周，周一为一周之首
+    var year = now.getFullYear();
+    var jan4 = new Date(year, 0, 4);
+    var jan4Day = jan4.getDay() || 7; // 1=周一 ... 7=周日
+    var firstMonday = new Date(jan4);
+    firstMonday.setDate(4 - (jan4Day - 1));
+    var diff = Math.floor((now - firstMonday) / 86400000);
+    var weekNum = Math.floor(diff / 7) + 1;
+    // 年末跨年处理
+    if (weekNum < 1) {
+      year--;
+      var prevJan4 = new Date(year, 0, 4);
+      var prevJan4Day = prevJan4.getDay() || 7;
+      var prevFirstMonday = new Date(prevJan4);
+      prevFirstMonday.setDate(4 - (prevJan4Day - 1));
+      var prevDiff = Math.floor((now - prevFirstMonday) / 86400000);
+      weekNum = Math.floor(prevDiff / 7) + 1;
+    }
+    return year + '-W' + weekNum;
   }
   var WEEK_KEY = getWeekKey();          // 始终 = 真实本周（保存用）
   var DISPLAY_WEEK = WEEK_KEY;          // 当前展示的周（导航可变）
   document.getElementById('week-label').textContent = '📅 ' + DISPLAY_WEEK.replace('-', '年 第') + '周';
 
-  // 根据日期计算 WEEK_KEY
+  // 根据日期计算 WEEK_KEY（ISO 8601）
   function getWeekKeyForDate(d){
-    var jan1 = new Date(d.getFullYear(), 0, 1);
-    var dayOfYear = Math.floor((d - jan1) / 86400000);
-    var weekNum = Math.ceil((dayOfYear + jan1.getDay() + 1) / 7);
-    return d.getFullYear() + '-W' + weekNum;
+    var year = d.getFullYear();
+    var jan4 = new Date(year, 0, 4);
+    var jan4Day = jan4.getDay() || 7;
+    var firstMonday = new Date(jan4);
+    firstMonday.setDate(4 - (jan4Day - 1));
+    var diff = Math.floor((d - firstMonday) / 86400000);
+    var weekNum = Math.floor(diff / 7) + 1;
+    if (weekNum < 1) {
+      year--;
+      var prevJan4 = new Date(year, 0, 4);
+      var prevJan4Day = prevJan4.getDay() || 7;
+      var prevFirstMonday = new Date(prevJan4);
+      prevFirstMonday.setDate(4 - (prevJan4Day - 1));
+      var prevDiff = Math.floor((d - prevFirstMonday) / 86400000);
+      weekNum = Math.floor(prevDiff / 7) + 1;
+    }
+    return year + '-W' + weekNum;
   }
+
+  // v35: 修复旧 getWeekKey 周日翻周 bug → 自动找回数据
+  // 旧公式（有 bug）：ceil((dayOfYear + jan1.getDay() + 1) / 7)，周日会提前翻到下一周
+  // 如果新 key ≠ 旧 key，检查旧 key 下是否有数据，自动迁移
+  (function recoverFromBuggyWeekKey(){
+    var oldBuggyKey = (function(){
+      var now = new Date();
+      var jan1 = new Date(now.getFullYear(), 0, 1);
+      var dayOfYear = Math.floor((now - jan1) / 86400000);
+      var weekNum = Math.ceil((dayOfYear + jan1.getDay() + 1) / 7);
+      return now.getFullYear() + '-W' + weekNum;
+    })();
+    if (oldBuggyKey === WEEK_KEY) return; // 无偏差，无需恢复
+    console.log('[数据恢复] 检测到旧 key=' + oldBuggyKey + ', 新 key=' + WEEK_KEY + ' → 自动迁移数据');
+    var keys = ['sleep', 'tasks', 'diary', 'exe', 'mtgs', 'goals', 'inspo', 'media-review', 'fans'];
+    for (var i = 0; i < keys.length; i++) {
+      var oldKey = 'wb-' + oldBuggyKey + '-' + keys[i];
+      var newKey = 'wb-' + WEEK_KEY + '-' + keys[i];
+      var oldVal = localStorage.getItem(oldKey);
+      if (oldVal && !localStorage.getItem(newKey)) {
+        localStorage.setItem(newKey, oldVal);
+        localStorage.removeItem(oldKey);
+        console.log('[数据恢复] ' + keys[i] + ': ' + oldBuggyKey + ' → ' + WEEK_KEY);
+      }
+    }
+    // 也恢复天气快照
+    var oldWxKey = 'wb-' + oldBuggyKey + '-wx';
+    var newWxKey = 'wb-' + WEEK_KEY + '-wx';
+    var oldWxVal = localStorage.getItem(oldWxKey);
+    if (oldWxVal && !localStorage.getItem(newWxKey)) {
+      localStorage.setItem(newWxKey, oldWxVal);
+      localStorage.removeItem(oldWxKey);
+      console.log('[数据恢复] wx: ' + oldBuggyKey + ' → ' + WEEK_KEY);
+    }
+  })();
 
   window.switchToWeek = switchToWeek;
   window.resetToCurrentWeek = resetToCurrentWeek;
@@ -832,8 +895,8 @@ try {
     var todayBtn = document.getElementById('week-today-btn');
     if (todayBtn) todayBtn.style.display = isHistory ? 'inline' : 'none';
     // v-debug
-    var dbg = document.getElementById('v34-debug');
-    if (dbg) dbg.textContent = isHistory ? 'v34 📋' : 'v34';
+    var dbg = document.getElementById('v35-debug');
+    if (dbg) dbg.textContent = isHistory ? 'v35 📋' : 'v35';
     // 禁用新增按钮（历史周不可编辑）
     var addBtns = document.querySelectorAll('.add-btn');
     for (var b = 0; b < addBtns.length; b++) {
@@ -3059,7 +3122,7 @@ try {
 </script>
 
 <!-- 静态调试标记：如果刷新后能看到这个，说明 HTML 已加载最新版 -->
-<div id="v34-debug" style="position:fixed;bottom:4px;right:4px;font-size:11px;color:#fff;background:#1D9E75;padding:3px 8px;border-radius:4px;z-index:99999;pointer-events:none;font-family:monospace">v34</div>
+<div id="v35-debug" style="position:fixed;bottom:4px;right:4px;font-size:11px;color:#fff;background:#1D9E75;padding:3px 8px;border-radius:4px;z-index:99999;pointer-events:none;font-family:monospace">v35</div>
 
 <!-- ===== 会议标签选择浮层 ===== -->
 <div id="mtg-tag-picker" class="mtg-tag-picker">
@@ -3183,8 +3246,8 @@ try {
   }
 
   // —— 更新调试标记为带时间戳 ——
-  var dbg = document.getElementById('v34-debug');
-  if (dbg) dbg.textContent = 'v34 ' + ts();
+  var dbg = document.getElementById('v35-debug');
+  if (dbg) dbg.textContent = 'v35 ' + ts();
 
   // —— 事件委托：input ——
   document.addEventListener('input', function(e) {
@@ -3199,7 +3262,7 @@ try {
     if (e.target && e.target.id && F.indexOf(e.target.id) >= 0) svFans();
   });
 
-  console.log('[v34] mtg time inputs + editable tag names, wk=' + wk);
+  console.log('[v35] mtg time inputs + editable tag names, wk=' + wk);
 })();
 
 // —— Service Worker（如果存在） ——
