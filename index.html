@@ -821,7 +821,7 @@ try {
     return year + '-W' + weekNum;
   }
 
-  // v35: 修复旧 getWeekKey 周日翻周 bug → 自动找回数据
+  // v36: 修复旧 getWeekKey 周日翻周 bug → 自动找回数据
   // 旧公式（有 bug）：ceil((dayOfYear + jan1.getDay() + 1) / 7)，周日会提前翻到下一周
   // 如果新 key ≠ 旧 key，检查旧 key 下是否有数据，自动迁移
   (function recoverFromBuggyWeekKey(){
@@ -895,8 +895,8 @@ try {
     var todayBtn = document.getElementById('week-today-btn');
     if (todayBtn) todayBtn.style.display = isHistory ? 'inline' : 'none';
     // v-debug
-    var dbg = document.getElementById('v35-debug');
-    if (dbg) dbg.textContent = isHistory ? 'v35 📋' : 'v35';
+    var dbg = document.getElementById('v36-debug');
+    if (dbg) dbg.textContent = isHistory ? 'v36 📋' : 'v36';
     // 禁用新增按钮（历史周不可编辑）
     var addBtns = document.querySelectorAll('.add-btn');
     for (var b = 0; b < addBtns.length; b++) {
@@ -1963,9 +1963,22 @@ try {
     '温州':[27.9939,120.6994], '常州':[31.8101,119.9737], '徐州':[34.2058,117.2848],
   };
 
+  // 防抖：10 秒内不允许重复触发（解决自动刷新问题）
+  var _lastWeatherFetch = 0;
+  var _weatherFetching = false;
   window.fetchWeather = function(){
+    var now = Date.now();
+    // 如果正在请求中，忽略
+    if (_weatherFetching) return;
+    // 10 秒内不允许重复刷新
+    if (now - _lastWeatherFetch < 10000) {
+      console.log('[fetchWeather] 距上次刷新不足 10 秒，跳过（防止自动循环）');
+      return;
+    }
+    _lastWeatherFetch = now;
+    _weatherFetching = true;
     var city = document.getElementById('wx-city').value.trim();
-    if (!city) { alert('请输入城市名称'); return; }
+    if (!city) { _weatherFetching = false; alert('请输入城市名称'); return; }
     var row = document.getElementById('weather-row');
     row.innerHTML = '<div class="wx-loading">⏳ 正在查询 ' + city + ' 天气...</div>';
 
@@ -1985,6 +1998,7 @@ try {
         .then(function(wx){
           if (!wx.daily) throw new Error('No daily data');
           renderWeather(wx, displayName || city);
+          _weatherFetching = false;
         });
     };
 
@@ -1999,12 +2013,15 @@ try {
           .then(function(wttr){
             if (wttr && wttr.weather) {
               renderWeatherFromWttr(wttr, city);
+              _weatherFetching = false;
             } else {
               row.innerHTML = '<div class="wx-loading">⚠️ 未获取到天气数据，请检查城市名称或稍后重试</div>';
+              _weatherFetching = false;
             }
           })
           .catch(function(){
             row.innerHTML = '<div class="wx-loading">⚠️ 网络请求失败，请检查网络连接后重试</div>';
+            _weatherFetching = false;
           });
       });
     };
@@ -2021,6 +2038,7 @@ try {
         .then(function(geo){
           if (!geo.results || geo.results.length === 0) {
             row.innerHTML = '<div class="wx-loading">⚠️ 未找到城市「' + city + '」，请检查名称（如：上海、北京、深圳）</div>';
+            _weatherFetching = false;
             return;
           }
           var loc = geo.results[0];
@@ -2028,6 +2046,7 @@ try {
         })
         .catch(function(){
           row.innerHTML = '<div class="wx-loading">⚠️ 地理编码失败，请检查城市名称或稍后重试</div>';
+          _weatherFetching = false;
         });
     }
   };
@@ -2127,6 +2146,7 @@ try {
       document.getElementById('wx-updated').textContent = '✅ ' + cityName + ' · 已更新 (via wttr)';
     } catch(e) {
       row.innerHTML = '<div class="wx-loading">⚠️ 天气数据解析失败</div>';
+      _weatherFetching = false;
     }
   }
 
@@ -2905,11 +2925,13 @@ try {
   };
 
   // Auto-check sync status and pull on load
+  var _syncReloadFired = false; // 会话级：防止反复 reload
   try {
     updateSyncStatus();
     if (getSyncToken()) {
       cloudPull(function(ok, mergedCount){
-        if (ok && mergedCount > 0) {
+        if (ok && mergedCount > 0 && !_syncReloadFired) {
+          _syncReloadFired = true;
           setTimeout(function(){ location.reload(); }, 500);
         }
       });
@@ -3027,7 +3049,10 @@ try {
     return now.getFullYear() + '-' + (now.getMonth()+1) + '-' + now.getDate();
   }
 
+  var _tarotInited = false;
   function initTarot(){
+    if (_tarotInited) return; // 防止重复初始化
+    _tarotInited = true;
     var card = drawDailyTarot();
     renderTarotCard(card);
 
@@ -3122,7 +3147,7 @@ try {
 </script>
 
 <!-- 静态调试标记：如果刷新后能看到这个，说明 HTML 已加载最新版 -->
-<div id="v35-debug" style="position:fixed;bottom:4px;right:4px;font-size:11px;color:#fff;background:#1D9E75;padding:3px 8px;border-radius:4px;z-index:99999;pointer-events:none;font-family:monospace">v35</div>
+<div id="v36-debug" style="position:fixed;bottom:4px;right:4px;font-size:11px;color:#fff;background:#1D9E75;padding:3px 8px;border-radius:4px;z-index:99999;pointer-events:none;font-family:monospace">v36</div>
 
 <!-- ===== 会议标签选择浮层 ===== -->
 <div id="mtg-tag-picker" class="mtg-tag-picker">
@@ -3246,8 +3271,8 @@ try {
   }
 
   // —— 更新调试标记为带时间戳 ——
-  var dbg = document.getElementById('v35-debug');
-  if (dbg) dbg.textContent = 'v35 ' + ts();
+  var dbg = document.getElementById('v36-debug');
+  if (dbg) dbg.textContent = 'v36 ' + ts();
 
   // —— 事件委托：input ——
   document.addEventListener('input', function(e) {
@@ -3262,12 +3287,12 @@ try {
     if (e.target && e.target.id && F.indexOf(e.target.id) >= 0) svFans();
   });
 
-  console.log('[v35] mtg time inputs + editable tag names, wk=' + wk);
+  console.log('[v36] mtg time inputs + editable tag names, wk=' + wk);
 })();
 
 // —— Service Worker（如果存在） ——
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('service-worker.js?v=11')
+  navigator.serviceWorker.register('service-worker.js?v=12')
     .then(function(reg) { console.log('SW registered:', reg.scope); })
     .catch(function(err) { console.log('SW failed:', err); });
 }
