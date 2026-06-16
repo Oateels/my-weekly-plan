@@ -368,8 +368,8 @@ textarea:focus{border-color:#b4b2a9}
     <div class="weather-bar">
       <span style="font-size:13px;font-weight:500">🌤 本周天气</span>
       <span class="weather-city">
-        <input type="text" id="wx-city" placeholder="输入城市" value="深圳" onkeydown="if(event.key==='Enter')fetchWeather()">
-        <button onclick="fetchWeather()">查询</button>
+        <input type="text" id="wx-city" placeholder="输入城市" value="深圳" onkeydown="if(event.key==='Enter')fetchWeather(true)">
+        <button onclick="fetchWeather(true)">查询</button>
       </span>
       <span class="weather-refresh" id="wx-updated"></span>
     </div>
@@ -945,11 +945,7 @@ try {
     loadAllDiaries();
     loadPodcastRecommendation();
     updateStats();
-    // 天气不作自动切换（只在本周自动获取）
-    if (DISPLAY_WEEK === WEEK_KEY) {
-      var savedCity = localStorage.getItem('wb-wx-city');
-      if (savedCity) { setTimeout(function(){ fetchWeather(); }, 300); }
-    }
+    // 天气不做自动切换（只在首页初始加载时由 IIFE 统一初始化）
   }
 
   // loadTasks 的 DISPLAY_WEEK 版本
@@ -1963,20 +1959,30 @@ try {
     '温州':[27.9939,120.6994], '常州':[31.8101,119.9737], '徐州':[34.2058,117.2848],
   };
 
-  // 防抖：10 秒内不允许重复触发（解决自动刷新问题）
+  // 防抖：防止多次重复触发（内存级 + sessionStorage 级双保险）
   var _lastWeatherFetch = 0;
   var _weatherFetching = false;
-  window.fetchWeather = function(){
-    var now = Date.now();
+  window.fetchWeather = function(force){
     // 如果正在请求中，忽略
-    if (_weatherFetching) return;
-    // 10 秒内不允许重复刷新
-    if (now - _lastWeatherFetch < 10000) {
-      console.log('[fetchWeather] 距上次刷新不足 10 秒，跳过（防止自动循环）');
+    if (_weatherFetching) {
+      console.log('[fetchWeather] 正在请求中，跳过');
+      return;
+    }
+    // 少于一秒内不允许重复
+    var now = Date.now();
+    if (now - _lastWeatherFetch < 1000) {
+      console.log('[fetchWeather] 距上次请求不足 1 秒，跳过');
+      return;
+    }
+    // 本次页面会话已成功获取过天气，跳过自动请求（手动 force=true 可绕过）
+    if (!force && sessionStorage.getItem('__wx_loaded__') === '1') {
+      console.log('[fetchWeather] 本次会话已加载过天气，跳过自动请求');
       return;
     }
     _lastWeatherFetch = now;
     _weatherFetching = true;
+    // 重置标记，允许手动刷新
+    if (force) { try { sessionStorage.removeItem('__wx_loaded__'); } catch(e) {} }
     var city = document.getElementById('wx-city').value.trim();
     if (!city) { _weatherFetching = false; alert('请输入城市名称'); return; }
     var row = document.getElementById('weather-row');
@@ -2144,6 +2150,7 @@ try {
       }
       row.innerHTML = html;
       document.getElementById('wx-updated').textContent = '✅ ' + cityName + ' · 已更新 (via wttr)';
+      try { sessionStorage.setItem('__wx_loaded__', '1'); } catch(e) {}
     } catch(e) {
       row.innerHTML = '<div class="wx-loading">⚠️ 天气数据解析失败</div>';
       _weatherFetching = false;
@@ -2317,6 +2324,8 @@ try {
     }
     row.innerHTML = html;
     document.getElementById('wx-updated').textContent = '✅ ' + cityName + ' · 已更新';
+    // 标记本次会话已成功加载天气
+    try { sessionStorage.setItem('__wx_loaded__', '1'); } catch(e) {}
     // Save city + weather snapshot
     try {
       localStorage.setItem('wb-wx-city', document.getElementById('wx-city').value);
@@ -2925,16 +2934,22 @@ try {
   };
 
   // Auto-check sync status and pull on load
-  var _syncReloadFired = false; // 会话级：防止反复 reload
+  // sessionStorage 级别的防重复：解决 JS 变量在 location.reload() 后重置的问题
   try {
     updateSyncStatus();
     if (getSyncToken()) {
-      cloudPull(function(ok, mergedCount){
-        if (ok && mergedCount > 0 && !_syncReloadFired) {
-          _syncReloadFired = true;
-          setTimeout(function(){ location.reload(); }, 500);
-        }
-      });
+      var _syncReloaded = sessionStorage.getItem('__sync_reloaded__');
+      if (!_syncReloaded) {
+        cloudPull(function(ok, mergedCount){
+          if (ok && mergedCount > 0) {
+            sessionStorage.setItem('__sync_reloaded__', '1');
+            console.log('[sync] 云端有数据合并，刷新页面...');
+            setTimeout(function(){ location.reload(); }, 500);
+          }
+        });
+      } else {
+        console.log('[sync] 本次会话已同步过，跳过重复拉取');
+      }
     }
   } catch(e) {
     console.error('Init sync error:', e);
@@ -3051,8 +3066,15 @@ try {
 
   var _tarotInited = false;
   function initTarot(){
-    if (_tarotInited) return; // 防止重复初始化
+    if (_tarotInited) { console.log('[initTarot] 已初始化，跳过'); return; }
+    // sessionStorage 级防重复（跨 reload 保护）
+    if (sessionStorage.getItem('__tarot_inited__') === '1') {
+      console.log('[initTarot] 本次会话已初始化塔罗，跳过');
+      _tarotInited = true;
+      return;
+    }
     _tarotInited = true;
+    try { sessionStorage.setItem('__tarot_inited__', '1'); } catch(e) {}
     var card = drawDailyTarot();
     renderTarotCard(card);
 
@@ -3123,15 +3145,24 @@ try {
 
   // ===== 最后初始化：必须在所有变量/函数定义之后执行 =====
   (function initWeather(){
+    // sessionStorage 级防重复：如果本次会话已初始化，跳过全部
+    if (sessionStorage.getItem('__app_inited__') === '1') {
+      console.log('[init] 本次会话已初始化，跳过');
+      return;
+    }
+    try { sessionStorage.setItem('__app_inited__', '1'); } catch(e) {}
+
     var savedCity = localStorage.getItem('wb-wx-city');
     if (savedCity) {
       document.getElementById('wx-city').value = savedCity;
-      // Auto-fetch weather on load if city is saved
-      setTimeout(function(){ fetchWeather(); }, 500);
+      // Auto-fetch weather on load（仅首次，sessionStorage 保证不重复）
+      console.log('[init] 自动获取天气: ' + savedCity);
+      setTimeout(function(){ fetchWeather(); }, 800);
     }
     loadAllDiaries();
     loadPodcastRecommendation();
     initTarot();
+    console.log('[init] 初始化完成');
   })();
 
 } catch(e) {
@@ -3287,12 +3318,12 @@ try {
     if (e.target && e.target.id && F.indexOf(e.target.id) >= 0) svFans();
   });
 
-  console.log('[v36] mtg time inputs + editable tag names, wk=' + wk);
+  console.log('[v37] sessionStorage防刷新 + 统一初始化入口, wk=' + wk);
 })();
 
 // —— Service Worker（如果存在） ——
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('service-worker.js?v=12')
+  navigator.serviceWorker.register('service-worker.js?v=13')
     .then(function(reg) { console.log('SW registered:', reg.scope); })
     .catch(function(err) { console.log('SW failed:', err); });
 }
